@@ -10,6 +10,8 @@ import { users, events, participants } from './db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, setSessionUser, getSessionUserId } from './auth';
+import profileRouter from './routes/profile';
+import adminEventsRouter from './routes/events';
 
 const app = express();
 
@@ -106,6 +108,10 @@ app.post('/api/events/register', requireAuth, async (req, res) => {
     .returning();
   res.status(201).json(row);
 });
+
+// Mount routers
+app.use('/api/profile', profileRouter);
+app.use('/api/admin/events', adminEventsRouter);
 
 app.listen(env.PORT, () => {
   // eslint-disable-next-line no-console
