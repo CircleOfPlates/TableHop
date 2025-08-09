@@ -1,8 +1,10 @@
 import { useAuth } from '../auth/AuthContext'
 import { Avatar, Button, DropdownMenu } from './ui'
+import { useTheme } from './ThemeProvider'
 
 export default function Header() {
   const { user } = useAuth()
+  const { theme, setTheme, contrast, setContrast } = useTheme()
   const displayName = user ? `User ${user.id}` : 'Guest'
   return (
     <header className="border-b bg-background">
@@ -23,6 +25,13 @@ export default function Header() {
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content className="card p-2" align="end">
+                <DropdownMenu.Item asChild>
+                  <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>Toggle {theme === 'light' ? 'dark' : 'light'} mode</button>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item asChild>
+                  <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={() => setContrast(contrast === 'normal' ? 'high' : 'normal')}>Toggle {contrast === 'normal' ? 'high' : 'normal'} contrast</button>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Label className="px-2 py-1 text-xs text-muted-foreground">Account</DropdownMenu.Label>
                 <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/dashboard">Dashboard</a>

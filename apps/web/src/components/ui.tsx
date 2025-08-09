@@ -34,6 +34,41 @@ export function Avatar({ name }: { name: string }) {
   )
 }
 
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-muted ${className}`} />
+}
+
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  description?: string
+  confirmText?: string
+  cancelText?: string
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className="card p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+        <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
+        {description && <Dialog.Description className="text-sm text-muted-foreground mt-1">{description}</Dialog.Description>}
+        <div className="mt-6 flex justify-end gap-2">
+          <button className="btn btn-outline" onClick={() => onOpenChange(false)}>{cancelText}</button>
+          <button className="btn btn-primary" onClick={onConfirm}>{confirmText}</button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Root>
+  )
+}
+
 export { DropdownMenu, Dialog, Tabs, Tooltip, Toast, Progress, Separator }
 
 

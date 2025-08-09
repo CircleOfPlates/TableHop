@@ -7,6 +7,10 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import Events from './pages/Events'
 import Dashboard from './pages/Dashboard'
+import HowItWorks from './pages/HowItWorks'
+import Pricing from './pages/Pricing'
+import Faqs from './pages/Faqs'
+import Profile from './pages/Profile'
 import AppToaster from './components/Toaster'
 
 const queryClient = new QueryClient()
@@ -22,6 +26,10 @@ function App() {
           <Route path="/signup" component={Signup} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/events" component={Events} />
+          <Route path="/how-it-works" component={HowItWorks} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/faqs" component={Faqs} />
+          <Route path="/profile" component={Profile} />
           <Route>
             <Redirect to="/" />
           </Route>
