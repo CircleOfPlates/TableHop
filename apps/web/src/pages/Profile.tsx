@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
+import { useLocation } from 'wouter'
 
 const detailsSchema = z.object({
   name: z.string().min(2).max(200),
@@ -20,6 +21,8 @@ const prefsSchema = z.object({
 })
 
 export default function Profile() {
+  const [location] = useLocation()
+  const isOnboarding = location.includes('onboarding=true')
   const detailsForm = useForm<z.infer<typeof detailsSchema>>({ resolver: zodResolver(detailsSchema) })
   const prefsForm = useForm<z.infer<typeof prefsSchema>>({ resolver: zodResolver(prefsSchema) })
 
@@ -42,6 +45,9 @@ export default function Profile() {
     try {
       await api('/api/profile', { method: 'PUT', body: JSON.stringify(values) })
       toast.success('Profile saved')
+      if (isOnboarding) {
+        location.href = '/dashboard?welcome=true'
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Save failed')
     }
@@ -65,7 +71,10 @@ export default function Profile() {
 
   return (
     <div>
-      <PageHeader title="Your profile" subtitle="Manage your details and preferences" />
+      <PageHeader 
+        title={isOnboarding ? "Complete your profile" : "Your profile"} 
+        subtitle={isOnboarding ? "Tell us about yourself to get better matches" : "Manage your details and preferences"} 
+      />
       <div className="container pb-10">
       <Tabs.Root defaultValue="details" className="space-y-4">
         <Tabs.List className="flex gap-2">
@@ -92,7 +101,7 @@ export default function Profile() {
                 <Input placeholder="A few words about you" {...detailsForm.register('bio')} />
               </div>
               <div className="md:col-span-2 flex justify-end">
-                <Button type="submit">Save</Button>
+                <Button type="submit">{isOnboarding ? 'Continue to Dashboard' : 'Save'}</Button>
               </div>
             </form>
           </Card>

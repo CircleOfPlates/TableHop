@@ -1,8 +1,18 @@
 import { Card, Button, Progress } from '../components/ui'
+import { useLocation } from 'wouter'
+import { toast } from 'sonner'
+import ProfileCompletionBanner from '../components/ProfileCompletionBanner'
 
 export default function Dashboard() {
+  const [location] = useLocation()
+  const isWelcome = location.includes('welcome=true')
+  
+  if (isWelcome) {
+    toast.success('Welcome to TableHop! Your profile is complete.')
+  }
   return (
     <div className="container py-10 space-y-8">
+      <ProfileCompletionBanner />
       <div className="grid md:grid-cols-3 gap-6">
         <Card>
           <div className="space-y-2">
@@ -35,8 +45,8 @@ export default function Dashboard() {
             <Progress.Indicator className="h-full w-2/3 flex-1 bg-primary transition-transform" style={{ transform: 'translateX(0%)' }} />
           </Progress.Root>
           <div className="flex gap-2">
-            <Button variant="outline">Edit profile</Button>
-            <Button>Manage preferences</Button>
+            <Button variant="outline" onClick={() => location.href = '/profile'}>Edit profile</Button>
+            <Button onClick={() => location.href = '/profile'}>Manage preferences</Button>
           </div>
         </div>
       </Card>

@@ -54,8 +54,8 @@ export function SignupForm() {
       await api('/api/auth/signup', { method: 'POST', body: JSON.stringify(values) })
       const me = await api<{ id: number }>('/api/auth/me')
       setUser(me)
-      toast.success('Account created successfully')
-      location.href = '/dashboard'
+      toast.success('Account created successfully! Please complete your profile.')
+      location.href = '/profile?onboarding=true'
     } catch (e: any) {
       toast.error(e?.message || 'Signup failed. Please try again.')
     }
