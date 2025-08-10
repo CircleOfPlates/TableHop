@@ -52,7 +52,7 @@
 
 @layer components {
   .container-narrow { @apply container max-w-4xl; }
-  .btn { @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50; }
+  .btn { @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 px-6 py-3; }
   .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
   .btn-outline { @apply border bg-transparent hover:bg-muted; }
   .card { @apply rounded-lg border bg-card text-card-foreground shadow-sm; }
