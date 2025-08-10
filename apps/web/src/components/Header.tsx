@@ -29,6 +29,24 @@ export default function Header() {
           <a href="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground">How it works</a>
         </nav>
         <div className="flex items-center gap-2">
+          {/* Theme controls - always visible */}
+          <div className="flex items-center gap-1">
+            <button 
+              className="p-2 rounded hover:bg-muted text-sm" 
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+            <button 
+              className="p-2 rounded hover:bg-muted text-sm" 
+              onClick={() => setContrast(contrast === 'normal' ? 'high' : 'normal')}
+              title={`Switch to ${contrast === 'normal' ? 'high' : 'normal'} contrast`}
+            >
+              {contrast === 'normal' ? '🔍' : '👁️'}
+            </button>
+          </div>
+          
           {user ? (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
@@ -38,13 +56,6 @@ export default function Header() {
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content className="card p-2" align="end">
-                <DropdownMenu.Item asChild>
-                  <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>Toggle {theme === 'light' ? 'dark' : 'light'} mode</button>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item asChild>
-                  <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={() => setContrast(contrast === 'normal' ? 'high' : 'normal')}>Toggle {contrast === 'normal' ? 'high' : 'normal'} contrast</button>
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Label className="px-2 py-1 text-xs text-muted-foreground">Account</DropdownMenu.Label>
                 <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/dashboard">Dashboard</a>

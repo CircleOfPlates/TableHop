@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { api } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { toast } from 'sonner'
+import { Input, Button } from '../components/ui'
 
 const loginSchema = z.object({
   identifier: z.string().min(3),
@@ -33,13 +34,17 @@ export function LoginForm() {
     }
   })
   return (
-    <form onSubmit={onSubmit} className="space-y-3 max-w-sm mx-auto p-6">
+    <form onSubmit={onSubmit} className="space-y-4 max-w-sm mx-auto p-6">
       <h2 className="text-xl font-semibold">Log in</h2>
-      <input className="border rounded p-2 w-full" placeholder="Username or email" {...register('identifier')} />
-      {errors.identifier && <p className="text-red-600 text-sm">{errors.identifier.message}</p>}
-      <input type="password" className="border rounded p-2 w-full" placeholder="Password" {...register('password')} />
-      {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
-      <button disabled={isSubmitting} className="w-full bg-black text-white rounded py-2">Log in</button>
+      <div className="space-y-2">
+        <Input placeholder="Username or email" {...register('identifier')} />
+        {errors.identifier && <p className="text-red-600 text-sm">{errors.identifier.message}</p>}
+      </div>
+      <div className="space-y-2">
+        <Input type="password" placeholder="Password" {...register('password')} />
+        {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
+      </div>
+      <Button type="submit" disabled={isSubmitting} className="w-full">Log in</Button>
     </form>
   )
 }
@@ -61,15 +66,21 @@ export function SignupForm() {
     }
   })
   return (
-    <form onSubmit={onSubmit} className="space-y-3 max-w-sm mx-auto p-6">
+    <form onSubmit={onSubmit} className="space-y-4 max-w-sm mx-auto p-6">
       <h2 className="text-xl font-semibold">Sign up</h2>
-      <input className="border rounded p-2 w-full" placeholder="Username" {...register('username')} />
-      {errors.username && <p className="text-red-600 text-sm">{errors.username.message}</p>}
-      <input className="border rounded p-2 w-full" placeholder="Email" {...register('email')} />
-      {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
-      <input type="password" className="border rounded p-2 w-full" placeholder="Password" {...register('password')} />
-      {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
-      <button disabled={isSubmitting} className="w-full bg-black text-white rounded py-2">Create account</button>
+      <div className="space-y-2">
+        <Input placeholder="Username" {...register('username')} />
+        {errors.username && <p className="text-red-600 text-sm">{errors.username.message}</p>}
+      </div>
+      <div className="space-y-2">
+        <Input placeholder="Email" {...register('email')} />
+        {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
+      </div>
+      <div className="space-y-2">
+        <Input type="password" placeholder="Password" {...register('password')} />
+        {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
+      </div>
+      <Button type="submit" disabled={isSubmitting} className="w-full">Create account</Button>
     </form>
   )
 }
