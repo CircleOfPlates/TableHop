@@ -1,11 +1,24 @@
 import { useAuth } from '../auth/AuthContext'
 import { Avatar, Button, DropdownMenu } from './ui'
 import { useTheme } from './ThemeProvider'
+import { api } from '../lib/api'
+import { toast } from 'sonner'
 
 export default function Header() {
-  const { user } = useAuth()
+  const { user, setUser } = useAuth()
   const { theme, setTheme, contrast, setContrast } = useTheme()
   const displayName = user ? `User ${user.id}` : 'Guest'
+
+  const handleLogout = async () => {
+    try {
+      await api('/api/auth/logout', { method: 'POST' })
+      setUser(null)
+      toast.success('Logged out successfully')
+      location.href = '/'
+    } catch (e: any) {
+      toast.error('Logout failed')
+    }
+  }
   return (
     <header className="border-b bg-background">
       <div className="container flex h-14 items-center justify-between">
@@ -42,6 +55,10 @@ export default function Header() {
                 <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/admin">Admin</a>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                <DropdownMenu.Item asChild>
+                  <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={handleLogout}>Log out</button>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Root>
