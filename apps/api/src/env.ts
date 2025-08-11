@@ -8,6 +8,7 @@ const envSchema = z.object({
   PORT: z.preprocess((v) => Number(v), z.number().int().positive()).default(4000),
   SESSION_SECRET: z.string().min(16),
   DATABASE_URL: z.string().url(),
+  FRONTEND_URL: z.string().url().optional(),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().optional(),
