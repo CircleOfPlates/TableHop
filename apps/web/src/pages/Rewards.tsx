@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
 import AuthGuard from '../components/AuthGuard'
-import { Trophy, Star, Target, TrendingUp, Award, Zap, Users, Crown } from 'lucide-react'
+import { Target, TrendingUp, Award, Zap, Crown } from 'lucide-react'
 
 interface Badge {
   id: string
@@ -67,7 +67,7 @@ export default function Rewards() {
 
   const checkBadgesMutation = useMutation({
     mutationFn: () => api('/api/rewards/badges/check', { method: 'POST' }),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.count > 0) {
         toast.success(`🎉 ${data.count} new badge${data.count > 1 ? 's' : ''} earned!`)
         queryClient.invalidateQueries({ queryKey: ['user-badges'] })
@@ -84,14 +84,7 @@ export default function Rewards() {
   const inProgressBadges = badges?.filter(b => !b.earned && b.progress > 0) || []
   const lockedBadges = badges?.filter(b => !b.earned && b.progress === 0) || []
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'hosting': return <Trophy className="w-4 h-4" />
-      case 'community': return <Users className="w-4 h-4" />
-      case 'milestone': return <Award className="w-4 h-4" />
-      default: return <Star className="w-4 h-4" />
-    }
-  }
+
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -119,10 +112,10 @@ export default function Rewards() {
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Zap className="w-6 h-6 text-yellow-500" />
-                  {pointsLoading ? '...' : pointsData?.currentPoints || 0} Points
+                  {pointsLoading ? '...' : (pointsData as any)?.currentPoints || 0} Points
                 </h2>
                 <p className="text-muted-foreground">
-                  Total earned: {pointsLoading ? '...' : pointsData?.totalPointsEarned || 0} points
+                  Total earned: {pointsLoading ? '...' : (pointsData as any)?.totalPointsEarned || 0} points
                 </p>
               </div>
               <Button
@@ -324,7 +317,7 @@ export default function Rewards() {
                       <div className="font-semibold">{badge.name}</div>
                       <div className="text-sm text-muted-foreground mb-2">{badge.description}</div>
                       <div className="text-xs text-muted-foreground">
-                        Requires: {badge.required} {badge.requirements?.type?.replace('_', ' ')}
+                        Requires: {badge.required} events
                       </div>
                     </div>
                   ))}

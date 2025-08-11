@@ -10,17 +10,13 @@ import {
   MapPin, 
   Clock, 
   ChefHat, 
-  Home, 
   Award, 
   TrendingUp, 
   Users, 
-  Star, 
   Target,
   Plus,
   ArrowRight,
   Trophy,
-  Heart,
-  Sparkles,
   Activity
 } from 'lucide-react'
 

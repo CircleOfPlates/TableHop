@@ -28,7 +28,7 @@ export default function ProfileCompletionBanner() {
             Add your details to get better matches and improve your experience.
           </p>
         </div>
-        <Button onClick={() => location.href = '/profile'} size="sm">
+        <Button onClick={() => location.href = '/profile'}>
           Complete Profile
         </Button>
       </div>
