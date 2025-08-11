@@ -295,9 +295,15 @@ app.use('/api/rewards', require('./routes/rewards').default);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', require('./routes/admin').default);
 
-app.listen(env.PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`API listening on http://localhost:${env.PORT}`);
-});
+// Only start the server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  app.listen(env.PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`API listening on http://localhost:${env.PORT}`);
+  });
+}
+
+// Export the app for Vercel serverless functions
+export { app };
 
 
