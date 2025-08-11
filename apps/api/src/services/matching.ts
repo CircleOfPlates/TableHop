@@ -372,7 +372,7 @@ export class MatchingService {
     const results: MatchingResult[] = []
 
     for (const group of groups) {
-      const participants = await db.select({
+      const groupParticipants = await db.select({
         id: participants.id,
         userId: participants.userId,
         coursePreference: participants.coursePreference,
@@ -396,13 +396,13 @@ export class MatchingService {
         group.dessertParticipantId
       ].filter(Boolean) as number[]))
 
-      const starterHost = participants.find(p => p.id === group.starterParticipantId) || null
-      const mainHost = participants.find(p => p.id === group.mainParticipantId) || null
-      const dessertHost = participants.find(p => p.id === group.dessertParticipantId) || null
+      const starterHost = groupParticipants.find((p: any) => p.id === group.starterParticipantId) || null
+      const mainHost = groupParticipants.find((p: any) => p.id === group.mainParticipantId) || null
+      const dessertHost = groupParticipants.find((p: any) => p.id === group.dessertParticipantId) || null
 
       results.push({
         groupId: group.id,
-        participants,
+        participants: groupParticipants,
         starterHost,
         mainHost,
         dessertHost,
