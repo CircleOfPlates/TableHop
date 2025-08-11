@@ -1,7 +1,6 @@
 import { useAuth } from '../auth/AuthContext'
 import { Avatar, Button, DropdownMenu } from './ui'
 import { useTheme } from './ThemeProvider'
-import { api } from '../lib/api'
 import { toast } from 'sonner'
 
 export default function Header() {

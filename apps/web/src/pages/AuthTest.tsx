@@ -56,15 +56,9 @@ export default function AuthTest() {
         <div className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Navigation</h2>
           <div className="flex gap-2">
-            <Button asChild>
-              <a href="/dashboard">Go to Dashboard</a>
-            </Button>
-            <Button asChild>
-              <a href="/profile">Go to Profile</a>
-            </Button>
-            <Button asChild>
-              <a href="/admin">Go to Admin</a>
-            </Button>
+            <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
+            <a href="/profile" className="btn btn-primary">Go to Profile</a>
+            <a href="/admin" className="btn btn-primary">Go to Admin</a>
           </div>
         </div>
       </Card>

@@ -3,7 +3,7 @@ import { Card, Button, Badge } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
-import { useAuth } from '../auth/AuthContext'
+
 import AuthGuard from '../components/AuthGuard'
 import { Calendar, Clock, MapPin, Users, ChefHat, Home } from 'lucide-react'
 
@@ -31,7 +31,6 @@ interface EventRegistration {
 }
 
 export default function Events() {
-  const { user } = useAuth()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false)
   const [registrationData, setRegistrationData] = useState<EventRegistration>({
