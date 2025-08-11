@@ -5,14 +5,14 @@ import { api } from '../lib/api'
 import { toast } from 'sonner'
 
 export default function Header() {
-  const { user, setUser } = useAuth()
+  const { user, logout } = useAuth()
+  console.log('user: ' + user)
   const { theme, setTheme, contrast, setContrast } = useTheme()
   const displayName = user ? `User ${user.id}` : 'Guest'
 
   const handleLogout = async () => {
     try {
-      await api('/api/auth/logout', { method: 'POST' })
-      setUser(null)
+      await logout()
       toast.success('Logged out successfully')
       location.href = '/'
     } catch (e: any) {
@@ -63,10 +63,14 @@ export default function Header() {
                 <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/profile">Profile</a>
                 </DropdownMenu.Item>
-                <DropdownMenu.Separator className="my-1 h-px bg-border" />
-                <DropdownMenu.Item asChild>
-                  <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/admin">Admin</a>
-                </DropdownMenu.Item>
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                    <DropdownMenu.Item asChild>
+                      <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/admin">Admin</a>
+                    </DropdownMenu.Item>
+                  </>
+                )}
                 <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Item asChild>
                   <button className="px-2 py-1.5 rounded hover:bg-muted text-sm w-full text-left" onClick={handleLogout}>Log out</button>

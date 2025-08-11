@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   preferredGroupSize: varchar('preferred_group_size', { length: 50 }),
   socialPreferences: jsonb('social_preferences').$type<string[]>(),
   role: varchar('role', { length: 20 }).default('user'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Neighbourhoods

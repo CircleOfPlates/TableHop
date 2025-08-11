@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
 import { useLocation } from 'wouter'
+import AuthGuard from '../components/AuthGuard'
 
 const detailsSchema = z.object({
   name: z.string().min(2).max(200),
@@ -21,7 +22,7 @@ const prefsSchema = z.object({
 })
 
 export default function Profile() {
-  const [location] = useLocation()
+  const [location, setLocation] = useLocation()
   const isOnboarding = location.includes('onboarding=true')
   const detailsForm = useForm<z.infer<typeof detailsSchema>>({ resolver: zodResolver(detailsSchema) })
   const prefsForm = useForm<z.infer<typeof prefsSchema>>({ resolver: zodResolver(prefsSchema) })
@@ -46,7 +47,7 @@ export default function Profile() {
       await api('/api/profile', { method: 'PUT', body: JSON.stringify(values) })
       toast.success('Profile saved')
       if (isOnboarding) {
-        location.href = '/dashboard?welcome=true'
+        setLocation('/dashboard?welcome=true')
       }
     } catch (e: any) {
       toast.error(e?.message || 'Save failed')
@@ -70,12 +71,13 @@ export default function Profile() {
   })
 
   return (
-    <div>
-      <PageHeader 
-        title={isOnboarding ? "Complete your profile" : "Your profile"} 
-        subtitle={isOnboarding ? "Tell us about yourself to get better matches" : "Manage your details and preferences"} 
-      />
-      <div className="container pb-10">
+    <AuthGuard>
+      <div>
+        <PageHeader 
+          title={isOnboarding ? "Complete your profile" : "Your profile"} 
+          subtitle={isOnboarding ? "Tell us about yourself to get better matches" : "Manage your details and preferences"} 
+        />
+        <div className="container pb-10">
       <Tabs.Root defaultValue="details" className="space-y-4">
         <Tabs.List className="flex gap-2">
           <Tabs.Trigger className="btn btn-outline" value="details">Details</Tabs.Trigger>
@@ -132,8 +134,9 @@ export default function Profile() {
           </Card>
         </Tabs.Content>
       </Tabs.Root>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   )
 }
 

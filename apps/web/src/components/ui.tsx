@@ -25,6 +25,12 @@ export function Label(props: React.HTMLAttributes<HTMLLabelElement>) {
   return <label className="label" {...props} />
 }
 
+export function Badge({ className = '', variant = 'default', children }: { className?: string; variant?: 'default' | 'outline'; children: React.ReactNode }) {
+  const baseClasses = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium'
+  const variantClasses = variant === 'outline' ? 'border border-input bg-background text-foreground' : 'bg-primary text-primary-foreground'
+  return <span className={`${baseClasses} ${variantClasses} ${className}`}>{children}</span>
+}
+
 export function Avatar({ name }: { name: string }) {
   const initials = name.split(' ').map(n => n[0]?.toUpperCase()).slice(0,2).join('') || '?'
   return (

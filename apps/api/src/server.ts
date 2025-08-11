@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './env';
 import { sessionMiddleware } from './session';
 import { db } from './db/client';
@@ -11,7 +12,7 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, setSessionUser, getSessionUserId } from './auth';
 import profileRouter from './routes/profile';
-import adminEventsRouter from './routes/events';
+import { specs } from './swagger';
 
 const app = express();
 
@@ -28,8 +29,33 @@ app.use(
   })
 );
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [System]
+ *     description: Check if the API server is running
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ */
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'TableHop API Documentation'
+}));
 
 // Auth
 const signupSchema = z.object({
@@ -38,6 +64,65 @@ const signupSchema = z.object({
   password: z.string().min(8),
 });
 
+/**
+ * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minimum: 3
+ *                 example: johndoe
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john@example.com
+ *               password:
+ *                 type: string
+ *                 minimum: 8
+ *                 example: password123
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 1
+ *                 username:
+ *                   type: string
+ *                   example: johndoe
+ *                 email:
+ *                   type: string
+ *                   example: john@example.com
+ *       400:
+ *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: User already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/auth/signup', async (req, res) => {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -55,6 +140,60 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 const loginSchema = z.object({ identifier: z.string(), password: z.string() });
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Authenticate user and create session
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - identifier
+ *               - password
+ *             properties:
+ *               identifier:
+ *                 type: string
+ *                 description: Username or email
+ *                 example: johndoe
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 1
+ *                 username:
+ *                   type: string
+ *                   example: johndoe
+ *                 email:
+ *                   type: string
+ *                   example: john@example.com
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/auth/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -69,49 +208,92 @@ app.post('/api/auth/login', async (req, res) => {
   return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
 });
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user and destroy session
+ *     tags: [Authentication]
+ *     security:
+ *       - sessionAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ */
 app.post('/api/auth/logout', (req, res) => {
   req.session?.destroy(() => res.json({ ok: true }));
 });
 
-app.get('/api/auth/me', (req, res) => {
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user information
+ *     tags: [Authentication]
+ *     security:
+ *       - sessionAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 1
+ *                 role:
+ *                   type: string
+ *                   enum: [user, admin]
+ *                   example: user
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.get('/api/auth/me', async (req, res) => {
   const userId = getSessionUserId(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-  return res.json({ id: userId });
-});
-
-// Events basic routes
-app.get('/api/events', async (_req, res) => {
-  const all = await db.select().from(events);
-  res.json(all);
-});
-
-const registrationSchema = z.object({
-  eventId: z.number().int(),
-  partnerId: z.number().int().nullable().optional(),
-  coursePreference: z.enum(['starter', 'main', 'dessert']).nullable().optional(),
-});
-
-app.post('/api/events/register', requireAuth, async (req, res) => {
-  const parsed = registrationSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const userId = getSessionUserId(req)!;
-  const { eventId, partnerId, coursePreference } = parsed.data;
-
-  const existing = await db.query.participants.findFirst({
-    where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, userId)),
-  });
-  if (existing) return res.status(409).json({ error: 'Already registered' });
-
-  const [row] = await db
-    .insert(participants)
-    .values({ eventId, userId, partnerId: partnerId ?? null, coursePreference: coursePreference ?? null, isHost: false })
-    .returning();
-  res.status(201).json(row);
+  
+  try {
+    const user = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, userId),
+      columns: { id: true, role: true }
+    });
+    
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    return res.json({ id: user.id, role: user.role });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Mount routers
+app.use('/api/events', require('./routes/events').default);
+app.use('/api/ratings', require('./routes/ratings').default);
+app.use('/api/rewards', require('./routes/rewards').default);
+
+// Mount routers
 app.use('/api/profile', profileRouter);
-app.use('/api/admin/events', adminEventsRouter);
+app.use('/api/admin', require('./routes/admin').default);
 
 app.listen(env.PORT, () => {
   // eslint-disable-next-line no-console

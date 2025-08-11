@@ -8,7 +8,11 @@
     "dev:web": "npm run dev -w apps/web",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "db:studio": "npm run db:studio -w apps/api"
+    "db:studio": "npm run db:studio -w apps/api",
+    "db:push": "npm run db:push -w apps/api",
+    "create-admin": "npm run create-admin -w apps/api",
+    "create-neighbourhoods": "npm run create-neighbourhoods -w apps/api",
+    "create-events": "npm run create-events -w apps/api"
   },
   "keywords": [],
   "author": "",

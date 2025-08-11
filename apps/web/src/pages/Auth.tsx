@@ -18,16 +18,13 @@ const signupSchema = z.object({
 })
 
 export function LoginForm() {
-  const { setUser } = useAuth()
+  const { login } = useAuth()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema)
   })
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await api('/api/auth/login', { method: 'POST', body: JSON.stringify(values) })
-      const me = await api<{ id: number }>('/api/auth/me')
-      setUser(me)
-      toast.success('Logged in successfully')
+      await login(values.identifier, values.password)
       location.href = '/dashboard'
     } catch (e: any) {
       toast.error(e?.message || 'Login failed. Please check your credentials.')
@@ -57,7 +54,7 @@ export function SignupForm() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await api('/api/auth/signup', { method: 'POST', body: JSON.stringify(values) })
-      const me = await api<{ id: number }>('/api/auth/me')
+      const me = await api<{ id: number; role?: string }>('/api/auth/me')
       setUser(me)
       toast.success('Account created successfully! Please complete your profile.')
       location.href = '/profile?onboarding=true'
