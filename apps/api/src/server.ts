@@ -54,6 +54,16 @@ app.use(
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'TableHop API', 
+    version: '1.0.0',
+    health: '/health',
+    docs: '/api-docs'
+  });
+});
+
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',
