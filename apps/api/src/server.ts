@@ -8,7 +8,7 @@ import { env } from './env';
 import { sessionMiddleware } from './session';
 import { db } from './db/client';
 import { users, events, participants } from './db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, setSessionUser, getSessionUserId } from './auth';
 import profileRouter from './routes/profile';
@@ -29,6 +29,14 @@ app.use(
     limit: 300,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => {
+      // Use X-Forwarded-For header for Vercel, fallback to IP
+      return req.headers['x-forwarded-for'] as string || req.ip || 'unknown';
+    },
+    skip: (req) => {
+      // Skip rate limiting for health checks
+      return req.path === '/health';
+    }
   })
 );
 
@@ -60,8 +68,29 @@ app.get('/', (req, res) => {
     message: 'TableHop API', 
     version: '1.0.0',
     health: '/health',
-    docs: '/api-docs'
+    docs: '/api-docs',
+    dbTest: '/api/db-test'
   });
+});
+
+// Database connection test
+app.get('/api/db-test', async (req, res) => {
+  try {
+    // Test database connection
+    const result = await db.execute(sql`SELECT 1 as test`);
+    res.json({ 
+      success: true, 
+      message: 'Database connection successful',
+      result: result.rows?.[0] || result
+    });
+  } catch (error) {
+    console.error('Database test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database connection failed',
+      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
 });
 
 // Swagger Documentation
@@ -208,17 +237,38 @@ const loginSchema = z.object({ identifier: z.string(), password: z.string() });
  *               $ref: '#/components/schemas/Error'
  */
 app.post('/api/auth/login', async (req, res) => {
-  const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { identifier, password } = parsed.data;
-  const user = await db.query.users.findFirst({
-    where: (u, { or, eq }) => or(eq(u.email, identifier), eq(u.username, identifier)),
-  });
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  const ok = await bcrypt.compare(password, (user as any).passwordHash);
-  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-  setSessionUser(req, (user as any).id);
-  return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+  try {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    const { identifier, password } = parsed.data;
+    
+    console.log('Login attempt for:', identifier);
+    
+    const user = await db.query.users.findFirst({
+      where: (u, { or, eq }) => or(eq(u.email, identifier), eq(u.username, identifier)),
+    });
+    
+    if (!user) {
+      console.log('User not found:', identifier);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const ok = await bcrypt.compare(password, (user as any).passwordHash);
+    if (!ok) {
+      console.log('Invalid password for user:', identifier);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    setSessionUser(req, (user as any).id);
+    console.log('Login successful for user:', identifier);
+    return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
 });
 
 /**
