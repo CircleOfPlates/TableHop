@@ -29,7 +29,7 @@ export const sessionMiddleware = session({
   name: 'tablehop.sid', // Custom session name
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Temporarily set to false for debugging
     sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
   },
