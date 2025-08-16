@@ -97,13 +97,14 @@ app.get('/api/db-test', async (req, res) => {
 app.get('/api/session-debug', async (req, res) => {
   try {
     // Check if session table exists and get session data
-    const sessions = await db.execute(sql`SELECT * FROM session ORDER BY "expires" DESC LIMIT 5`);
+    const sessions = await db.execute(sql`SELECT * FROM session ORDER BY expire DESC LIMIT 5`);
     res.json({ 
       success: true, 
       message: 'Session debugging info',
       sessions: sessions.rows || sessions,
       currentSession: req.session,
-      sessionId: req.sessionID
+      sessionId: req.sessionID,
+      cookies: req.headers.cookie
     });
   } catch (error) {
     console.error('Session debug error:', error);
