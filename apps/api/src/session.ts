@@ -10,7 +10,7 @@ function createStore() {
     const store = new PgStore({ 
       pool, 
       tableName: 'session', 
-      createTableIfMissing: true 
+      createTableIfMissing: true
     });
     console.log('PostgreSQL session store created successfully');
     return store;

@@ -93,6 +93,28 @@ app.get('/api/db-test', async (req, res) => {
   }
 });
 
+// Session debugging endpoint
+app.get('/api/session-debug', async (req, res) => {
+  try {
+    // Check if session table exists and get session data
+    const sessions = await db.execute(sql`SELECT * FROM session ORDER BY "expires" DESC LIMIT 5`);
+    res.json({ 
+      success: true, 
+      message: 'Session debugging info',
+      sessions: sessions.rows || sessions,
+      currentSession: req.session,
+      sessionId: req.sessionID
+    });
+  } catch (error) {
+    console.error('Session debug error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Session debug failed',
+      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
+});
+
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',
