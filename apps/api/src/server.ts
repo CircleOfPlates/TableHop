@@ -332,8 +332,16 @@ app.post('/api/auth/logout', (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 app.get('/api/auth/me', async (req, res) => {
+  console.log('Auth me request - session:', req.session);
+  console.log('Auth me request - cookies:', req.headers.cookie);
+  
   const userId = getSessionUserId(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  console.log('Auth me - userId from session:', userId);
+  
+  if (!userId) {
+    console.log('Auth me - No userId found, returning 401');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   
   try {
     const user = await db.query.users.findFirst({
@@ -341,7 +349,12 @@ app.get('/api/auth/me', async (req, res) => {
       columns: { id: true, role: true }
     });
     
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (!user) {
+      console.log('Auth me - User not found in database:', userId);
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    console.log('Auth me - User found:', user);
     return res.json({ id: user.id, role: user.role });
   } catch (error) {
     console.error('Error fetching user:', error);

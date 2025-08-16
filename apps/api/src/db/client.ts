@@ -8,7 +8,8 @@ if (process.env.NODE_ENV === 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const pool = new Pool({ 
+// Create a shared connection pool
+export const pool = new Pool({ 
   connectionString: env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
