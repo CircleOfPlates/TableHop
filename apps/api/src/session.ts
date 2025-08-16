@@ -24,7 +24,7 @@ function createStore() {
 export const sessionMiddleware = session({
   store: createStore(),
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
-  resave: false,
+  resave: true, // Changed to true to ensure session is saved
   saveUninitialized: false,
   name: 'tablehop.sid', // Custom session name
   cookie: {
