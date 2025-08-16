@@ -266,6 +266,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { identifier, password } = parsed.data;
     
     console.log('Login attempt for:', identifier);
+    console.log('Login - Session ID before:', req.sessionID);
     
     const user = await db.query.users.findFirst({
       where: (u, { or, eq }) => or(eq(u.email, identifier), eq(u.username, identifier)),
@@ -285,6 +286,7 @@ app.post('/api/auth/login', async (req, res) => {
     setSessionUser(req, (user as any).id);
     console.log('Login successful for user:', identifier);
     console.log('Session after setting user:', req.session);
+    console.log('Login - Session ID after:', req.sessionID);
     
     // Save the session explicitly
     req.session.save((err) => {
@@ -293,7 +295,13 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(500).json({ error: 'Session save failed' });
       }
       console.log('Session saved successfully');
-      return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+      console.log('Login - Final Session ID:', req.sessionID);
+      return res.json({ 
+        id: (user as any).id, 
+        username: (user as any).username, 
+        email: (user as any).email,
+        sessionId: req.sessionID // Include session ID in response for debugging
+      });
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -367,6 +375,7 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', async (req, res) => {
   console.log('Auth me request - session:', req.session);
   console.log('Auth me request - cookies:', req.headers.cookie);
+  console.log('Auth me - Session ID:', req.sessionID);
   
   const userId = getSessionUserId(req);
   console.log('Auth me - userId from session:', userId);
