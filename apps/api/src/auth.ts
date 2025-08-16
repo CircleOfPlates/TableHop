@@ -6,12 +6,22 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export function setSessionUser(req: Request, userId: number) {
-  if (!req.session) return;
+  console.log('Setting session user:', userId);
+  console.log('Session before setting:', req.session);
+  
+  if (!req.session) {
+    console.log('No session available');
+    return;
+  }
+  
   (req.session as any).userId = userId;
+  console.log('Session after setting user:', req.session);
 }
 
 export function getSessionUserId(req: Request): number | null {
-  return req.session && (req.session as any).userId ? (req.session as any).userId : null;
+  const userId = req.session && (req.session as any).userId ? (req.session as any).userId : null;
+  console.log('Getting session userId:', userId);
+  return userId;
 }
 
 

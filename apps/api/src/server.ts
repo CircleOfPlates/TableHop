@@ -261,7 +261,17 @@ app.post('/api/auth/login', async (req, res) => {
     
     setSessionUser(req, (user as any).id);
     console.log('Login successful for user:', identifier);
-    return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+    console.log('Session after setting user:', req.session);
+    
+    // Save the session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error saving session:', err);
+        return res.status(500).json({ error: 'Session save failed' });
+      }
+      console.log('Session saved successfully');
+      return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+    });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ 
