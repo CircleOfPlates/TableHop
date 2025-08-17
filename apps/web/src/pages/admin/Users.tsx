@@ -91,14 +91,14 @@ export default function AdminUsers() {
                 <div>Actions</div>
               </div>
 
-              {data?.users.map((user) => (
+              {data?.users?.map((user) => (
                 <div key={user.id} className="grid grid-cols-6 gap-4 items-center py-3 border-b last:border-b-0">
                   <div className="font-medium">{user.name || user.username}</div>
                   <div className="text-sm">{user.email}</div>
                   <div>
                     <DropdownMenu.Root>
                       <DropdownMenu.Trigger asChild>
-                                                 <Button variant="outline">
+                        <Button variant="outline">
                           {user.role}
                         </Button>
                       </DropdownMenu.Trigger>
@@ -115,12 +115,18 @@ export default function AdminUsers() {
                   <div className="text-sm">{user.neighbourhood || '-'}</div>
                   <div className="text-sm">{new Date(user.createdAt).toLocaleDateString()}</div>
                   <div>
-                                         <Button variant="outline" onClick={() => window.open(`/admin/users/${user.id}`, '_blank')}>
+                    <Button variant="outline" onClick={() => window.open(`/admin/users/${user.id}`, '_blank')}>
                       View
                     </Button>
                   </div>
                 </div>
               ))}
+
+              {data?.users?.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No users found.
+                </div>
+              )}
             </div>
           )}
 

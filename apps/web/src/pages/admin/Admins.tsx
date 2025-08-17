@@ -81,7 +81,7 @@ export default function AdminAdmins() {
                 <div>Actions</div>
               </div>
 
-              {admins?.users.map((admin) => (
+              {admins?.users?.map((admin) => (
                 <div key={admin.id} className="grid grid-cols-5 gap-4 items-center py-3 border-b last:border-b-0">
                   <div className="font-medium">{admin.name}</div>
                   <div className="text-sm">{admin.username}</div>
@@ -95,7 +95,7 @@ export default function AdminAdmins() {
                 </div>
               ))}
 
-              {admins?.users.length === 0 && (
+              {admins?.users?.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   No admin users found
                 </div>

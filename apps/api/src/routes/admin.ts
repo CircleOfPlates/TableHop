@@ -15,9 +15,25 @@ const router = express.Router();
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *         description: Filter by role
  *     responses:
  *       200:
- *         description: List of all users
+ *         description: List of users with pagination
  *       401:
  *         description: Unauthorized
  *       403:
@@ -25,18 +41,49 @@ const router = express.Router();
  */
 router.get('/users', requireAdmin, async (req, res) => {
   try {
-    const allUsers = await db.query.users.findMany({
+    const { page = 1, search = '', role = '' } = req.query;
+    
+    // Build the query with filters
+    let query = db.query.users.findMany({
       columns: {
         id: true,
         username: true,
         email: true,
+        name: true,
         role: true,
+        neighbourhood: true,
         createdAt: true,
       },
       orderBy: [desc(users.createdAt)],
     });
 
-    return res.json(allUsers);
+    // Apply filters if provided
+    let allUsers = await query;
+    
+    // Filter by role if specified
+    if (role && role !== '') {
+      allUsers = allUsers.filter(user => user.role === role);
+    }
+    
+    // Filter by search term if specified
+    if (search && search !== '') {
+      const searchTerm = search.toString().toLowerCase();
+      allUsers = allUsers.filter(user => 
+        user.username?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm) ||
+        user.name?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return res.json({
+      users: allUsers,
+      pagination: {
+        page: Number(page),
+        limit: allUsers.length,
+        total: allUsers.length,
+        pages: 1,
+      },
+    });
   } catch (error) {
     console.error('Get users error:', error);
     return res.status(500).json({ error: 'Internal server error' });
