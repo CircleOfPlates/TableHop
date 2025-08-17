@@ -24,11 +24,11 @@ const options = {
     ],
     components: {
       securitySchemes: {
-        sessionAuth: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'connect.sid',
-          description: 'Session-based authentication cookie'
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'JWT token authentication'
         }
       },
       schemas: {
@@ -135,7 +135,7 @@ const options = {
     },
     security: [
       {
-        sessionAuth: []
+        bearerAuth: []
       }
     ]
   },
