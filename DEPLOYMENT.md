@@ -1,279 +1,259 @@
 # TableHop Deployment Guide
 
-This guide will help you deploy TableHop to various hosting platforms for free during development.
+This guide covers deploying TableHop to various platforms using Docker.
 
-## 🚀 Quick Deployment Options
+## Prerequisites
 
-### **Option 1: Railway (Recommended - Easiest)**
-- **Free Tier**: $5/month credit (enough for development)
-- **Pros**: Easy deployment, PostgreSQL included, automatic HTTPS
-- **Cons**: Limited free tier
+- Docker and Docker Compose installed
+- PostgreSQL database (managed or self-hosted)
+- Domain name (optional but recommended)
 
-### **Option 2: Render**
-- **Free Tier**: Free static sites, $7/month for web services
-- **Pros**: Good free tier, PostgreSQL available
-- **Cons**: Sleep after inactivity on free tier
+## Environment Variables
 
-### **Option 3: Vercel + Supabase**
-- **Free Tier**: Generous limits
-- **Pros**: Excellent performance, great developer experience
-- **Cons**: Requires separate database setup
+### Required Environment Variables
 
-### **Option 4: Netlify + Supabase**
-- **Free Tier**: Generous limits
-- **Pros**: Easy deployment, good performance
-- **Cons**: Requires separate database setup
+```bash
+# Database
+DATABASE_URL=postgresql://username:password@host:port/database
 
-## 📋 Pre-Deployment Checklist
+# Session Security
+SESSION_SECRET=your-super-secret-session-key-min-32-characters
 
-### 1. Environment Variables Setup
+# Frontend URL (for CORS)
+FRONTEND_URL=https://your-domain.com
 
-Create these environment files:
+# API URL (for frontend)
+API_URL=https://api.your-domain.com
+```
 
-**Backend (`apps/api/.env`):**
-```env
+### Optional Environment Variables
+
+```bash
+# Node Environment
 NODE_ENV=production
+
+# Port (defaults to 4000 for API, 80 for web)
 PORT=4000
-SESSION_SECRET=your-super-secret-session-key-here-min-16-chars
-DATABASE_URL=your-database-url-here
 ```
 
-**Frontend (`apps/web/.env`):**
-```env
-VITE_API_URL=https://your-api-domain.com
-```
+## Local Development
 
-### 2. Database Setup
-
-You'll need a PostgreSQL database. Options:
-- **Railway**: Built-in PostgreSQL
-- **Supabase**: Free tier with 500MB
-- **Neon**: Free tier with 3GB
-- **PlanetScale**: MySQL (requires schema changes)
-
-### 3. Build Scripts
-
-The application already has the necessary build scripts:
-- Backend: `npm run build` (creates `dist/` folder)
-- Frontend: `npm run build` (creates `dist/` folder)
-
-## 🚀 Railway Deployment (Recommended)
-
-### Step 1: Prepare Your Repository
-1. Push your code to GitHub
-2. Ensure all files are committed
-
-### Step 2: Deploy to Railway
-1. Go to [Railway.app](https://railway.app)
-2. Sign up with GitHub
-3. Click "New Project" → "Deploy from GitHub repo"
-4. Select your TableHop repository
-
-### Step 3: Add PostgreSQL Database
-1. In your Railway project, click "New"
-2. Select "Database" → "PostgreSQL"
-3. Railway will automatically add `DATABASE_URL` to your environment
-
-### Step 4: Configure Environment Variables
-1. Go to your project settings
-2. Add these environment variables:
-   ```
-   NODE_ENV=production
-   PORT=4000
-   SESSION_SECRET=your-super-secret-session-key-here-min-16-chars
-   ```
-
-### Step 5: Deploy Backend
-1. Railway will automatically detect and deploy your API
-2. The API will be available at `https://your-app-name.railway.app`
-
-### Step 6: Deploy Frontend
-1. Create a new service in Railway
-2. Select "Deploy from GitHub repo" again
-3. Choose the same repository
-4. Set the root directory to `apps/web`
-5. Add environment variable: `VITE_API_URL=https://your-api-domain.railway.app`
-
-### Step 7: Setup Database
-1. Connect to your Railway PostgreSQL database
-2. Run the database migrations:
+1. **Clone the repository:**
    ```bash
-   npm run db:push -w apps/api
+   git clone <repository-url>
+   cd TableHop
    ```
-3. Create initial data:
+
+2. **Start the development environment:**
    ```bash
-   npm run create-neighbourhoods -w apps/api
-   npm run create-events -w apps/api
-   npm run create-admin -w apps/api
+   docker-compose up -d
    ```
 
-## 🌐 Render Deployment
+3. **Initialize the database:**
+   ```bash
+   # Create admin user
+   docker-compose exec api npm run create-admin
+   
+   # Create sample data (optional)
+   docker-compose exec api npm run create-neighbourhoods
+   docker-compose exec api npm run create-events
+   ```
 
-### Step 1: Deploy Backend
-1. Go to [Render.com](https://render.com)
-2. Create account and connect GitHub
-3. Click "New" → "Web Service"
-4. Connect your repository
-5. Configure:
-   - **Name**: `tablehop-api`
-   - **Root Directory**: `apps/api`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-   - **Environment**: `Node`
+4. **Access the application:**
+   - Frontend: http://localhost:3000
+   - API: http://localhost:4000
+   - API Docs: http://localhost:4000/api-docs
 
-### Step 2: Add Environment Variables
-Add these in Render dashboard:
-```
-NODE_ENV=production
-PORT=10000
-SESSION_SECRET=your-super-secret-session-key-here-min-16-chars
-DATABASE_URL=your-postgresql-url
-```
+## Production Deployment
 
-### Step 3: Deploy Frontend
-1. Create another web service
-2. Configure:
-   - **Name**: `tablehop-web`
-   - **Root Directory**: `apps/web`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm run preview`
-   - **Environment**: `Node`
+### Option 1: Qovery Deployment
 
-### Step 4: Add Frontend Environment Variables
-```
-VITE_API_URL=https://your-api-service.onrender.com
-```
+1. **Connect your repository to Qovery**
 
-## ⚡ Vercel + Supabase Deployment
+2. **Create a new application in Qovery**
 
-### Step 1: Setup Supabase Database
-1. Go to [Supabase.com](https://supabase.com)
-2. Create new project
-3. Get your database URL from Settings → Database
+3. **Set up environment variables:**
+   - Go to your application settings
+   - Add all required environment variables listed above
 
-### Step 2: Deploy Backend to Vercel
-1. Go to [Vercel.com](https://vercel.com)
-2. Import your GitHub repository
-3. Configure:
-   - **Framework Preset**: `Node.js`
-   - **Root Directory**: `apps/api`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `npm install`
+4. **Deploy using Docker Compose:**
+   ```bash
+   # Use the production compose file
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
-### Step 3: Add Environment Variables
-Add these in Vercel dashboard:
-```
-NODE_ENV=production
-SESSION_SECRET=your-super-secret-session-key-here-min-16-chars
-DATABASE_URL=your-supabase-database-url
-```
+### Option 2: Docker Compose on VPS
 
-### Step 4: Deploy Frontend to Vercel
-1. Create another Vercel project
-2. Configure:
-   - **Framework Preset**: `Vite`
-   - **Root Directory**: `apps/web`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
+1. **Set up your server:**
+   ```bash
+   # Install Docker and Docker Compose
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo sh get-docker.sh
+   sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   sudo chmod +x /usr/local/bin/docker-compose
+   ```
 
-### Step 5: Add Frontend Environment Variables
-```
-VITE_API_URL=https://your-api-vercel-app.vercel.app
-```
+2. **Clone and deploy:**
+   ```bash
+   git clone <repository-url>
+   cd TableHop
+   
+   # Create .env file with your environment variables
+   cp .env.example .env
+   nano .env
+   
+   # Deploy
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
-## 🐳 Docker Deployment
+### Option 3: Kubernetes
 
-If you prefer Docker deployment:
+1. **Create Kubernetes manifests:**
+   ```bash
+   # Create namespace
+   kubectl create namespace tablehop
+   
+   # Apply secrets
+   kubectl apply -f k8s/secrets.yaml
+   
+   # Apply deployments
+   kubectl apply -f k8s/
+   ```
 
-### Step 1: Build and Run
+## Database Setup
+
+### PostgreSQL Requirements
+
+- **Version:** 15 or higher
+- **Extensions:** None required
+- **Connection:** SSL recommended for production
+
+### Database Initialization
+
+The application will automatically create the required tables on first run. You can also manually initialize:
+
 ```bash
-# Build and start all services
-docker-compose -f docker-compose.prod.yml up -d
+# Push schema to database
+docker-compose exec api npm run db:push
 
-# Or build individually
-docker build -t tablehop-api ./apps/api
-docker build -t tablehop-web ./apps/web
+# Create admin user
+docker-compose exec api npm run create-admin
 ```
 
-### Step 2: Environment Variables
-Create a `.env` file in the root:
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your-secure-password
-POSTGRES_DB=tablehop
-SESSION_SECRET=your-super-secret-session-key-here-min-16-chars
-VITE_API_URL=http://localhost:4000
-```
+## SSL/TLS Configuration
 
-## 🔧 Post-Deployment Setup
+For production deployments, ensure SSL is properly configured:
 
-### 1. Database Migration
-After deployment, run database setup:
+1. **Frontend (Nginx):**
+   - Configure SSL certificates in nginx.conf
+   - Redirect HTTP to HTTPS
+
+2. **API:**
+   - Use a reverse proxy (Nginx/Traefik) for SSL termination
+   - Or configure SSL directly in the Node.js application
+
+## Monitoring and Health Checks
+
+### Health Check Endpoints
+
+- **API Health:** `GET /health`
+- **API Documentation:** `GET /api-docs`
+
+### Logging
+
 ```bash
-# Connect to your deployed database and run:
-npm run db:push -w apps/api
-npm run create-neighbourhoods -w apps/api
-npm run create-events -w apps/api
-npm run create-admin -w apps/api
+# View logs
+docker-compose logs -f api
+docker-compose logs -f web
+
+# Production logs
+docker-compose -f docker-compose.prod.yml logs -f
 ```
 
-### 2. Test Your Deployment
-1. Visit your frontend URL
-2. Test user registration/login
-3. Test event browsing
-4. Check admin functionality
+## Troubleshooting
 
-### 3. Monitor Your Application
-- Check application logs
-- Monitor database connections
-- Test API endpoints via Swagger docs
+### Common Issues
 
-## 🆘 Troubleshooting
+1. **Database Connection Failed:**
+   - Check DATABASE_URL format
+   - Verify database is accessible
+   - Check SSL configuration
 
-### Common Issues:
+2. **Session Issues:**
+   - Ensure SESSION_SECRET is set and secure
+   - Check cookie domain settings
+   - Verify CORS configuration
 
-1. **Database Connection Errors**
-   - Verify `DATABASE_URL` is correct
-   - Check if database is accessible from your deployment platform
+3. **Frontend Can't Connect to API:**
+   - Check VITE_API_URL environment variable
+   - Verify CORS settings in API
+   - Check network connectivity
 
-2. **CORS Errors**
-   - Ensure frontend `VITE_API_URL` points to correct backend URL
-   - Check backend CORS configuration
+### Debug Commands
 
-3. **Session Issues**
-   - Verify `SESSION_SECRET` is set and secure
-   - Check if session store is properly configured
+```bash
+# Check container status
+docker-compose ps
 
-4. **Build Failures**
-   - Check if all dependencies are in `package.json`
-   - Verify TypeScript compilation
+# View container logs
+docker-compose logs api
 
-## 📊 Cost Comparison (Free Tiers)
+# Access container shell
+docker-compose exec api sh
 
-| Platform | Database | Backend | Frontend | Total Cost |
-|----------|----------|---------|----------|------------|
-| Railway | $5/month | Included | Included | $5/month |
-| Render | $7/month | Included | Free | $7/month |
-| Vercel + Supabase | Free | Free | Free | $0/month |
-| Netlify + Supabase | Free | Free | Free | $0/month |
+# Check database connection
+docker-compose exec api npm run db:push
+```
 
-## 🎯 Recommendation
+## Security Considerations
 
-For **development and testing**, I recommend:
-1. **Vercel + Supabase** (completely free)
-2. **Railway** (if you want everything in one place)
+1. **Environment Variables:**
+   - Never commit secrets to version control
+   - Use secure secret management
+   - Rotate secrets regularly
 
-For **production**, consider:
-- **Railway** or **Render** for simplicity
-- **AWS/GCP/Azure** for scalability
+2. **Database:**
+   - Use strong passwords
+   - Enable SSL connections
+   - Restrict network access
 
-## 📝 Next Steps
+3. **Application:**
+   - Keep dependencies updated
+   - Use HTTPS in production
+   - Implement rate limiting
 
-1. Choose your preferred platform
-2. Follow the deployment steps above
-3. Set up your environment variables
-4. Deploy and test your application
-5. Share your deployed URL!
+## Performance Optimization
 
-Need help? Check the platform-specific documentation or reach out for support.
+1. **Database:**
+   - Add appropriate indexes
+   - Use connection pooling
+   - Monitor query performance
+
+2. **Application:**
+   - Enable compression
+   - Use CDN for static assets
+   - Implement caching strategies
+
+## Backup Strategy
+
+1. **Database Backups:**
+   ```bash
+   # Create backup
+   docker-compose exec postgres pg_dump -U postgres tablehop > backup.sql
+   
+   # Restore backup
+   docker-compose exec -T postgres psql -U postgres tablehop < backup.sql
+   ```
+
+2. **Application Backups:**
+   - Backup environment variables
+   - Backup configuration files
+   - Document deployment procedures
+
+## Support
+
+For deployment issues:
+1. Check the troubleshooting section
+2. Review application logs
+3. Verify environment configuration
+4. Test with local development setup first
