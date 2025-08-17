@@ -1,35 +1,38 @@
-FROM node:18-alpine as builder
+# Use Node.js 18 Alpine for smaller image size
+FROM node:18-alpine AS base
 
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
-COPY vite.config.ts ./
-COPY tailwind.config.js ./
-COPY postcss.config.js ./
-
-# Install dependencies
+# Install dependencies based on the preferred package manager
+COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Copy source code
-COPY src/ ./src/
-COPY public/ ./public/
-COPY index.html ./
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production image, copy all the files and run nginx
+FROM nginx:alpine AS runner
+WORKDIR /usr/share/nginx/html
 
-# Copy built files to nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Remove default nginx static assets
+RUN rm -rf ./*
+
+# Copy static assets from builder stage
+COPY --from=builder /app/dist .
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 # Start nginx

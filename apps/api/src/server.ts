@@ -7,8 +7,8 @@ import swaggerUi from 'swagger-ui-express';
 import { env } from './env';
 import { sessionMiddleware } from './session';
 import { db } from './db/client';
-import { users, events, participants } from './db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { users } from './db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, setSessionUser, getSessionUserId } from './auth';
 import profileRouter from './routes/profile';
@@ -29,14 +29,6 @@ app.use(
     limit: 300,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => {
-      // Use X-Forwarded-For header for Vercel, fallback to IP
-      return req.headers['x-forwarded-for'] as string || req.ip || 'unknown';
-    },
-    skip: (req) => {
-      // Skip rate limiting for health checks
-      return req.path === '/health';
-    }
   })
 );
 
@@ -59,7 +51,6 @@ app.use(
  *                   type: boolean
  *                   example: true
  */
-// Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Root endpoint
@@ -68,52 +59,8 @@ app.get('/', (req, res) => {
     message: 'TableHop API', 
     version: '1.0.0',
     health: '/health',
-    docs: '/api-docs',
-    dbTest: '/api/db-test'
+    docs: '/api-docs'
   });
-});
-
-// Database connection test
-app.get('/api/db-test', async (req, res) => {
-  try {
-    // Test database connection
-    const result = await db.execute(sql`SELECT 1 as test`);
-    res.json({ 
-      success: true, 
-      message: 'Database connection successful',
-      result: result.rows?.[0] || result
-    });
-  } catch (error) {
-    console.error('Database test error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Database connection failed',
-      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-    });
-  }
-});
-
-// Session debugging endpoint
-app.get('/api/session-debug', async (req, res) => {
-  try {
-    // Check if session table exists and get session data
-    const sessions = await db.execute(sql`SELECT * FROM session ORDER BY expire DESC LIMIT 5`);
-    res.json({ 
-      success: true, 
-      message: 'Session debugging info',
-      sessions: sessions.rows || sessions,
-      currentSession: req.session,
-      sessionId: req.sessionID,
-      cookies: req.headers.cookie
-    });
-  } catch (error) {
-    console.error('Session debug error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Session debug failed',
-      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-    });
-  }
 });
 
 // Swagger Documentation
@@ -265,50 +212,29 @@ app.post('/api/auth/login', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const { identifier, password } = parsed.data;
     
-    console.log('Login attempt for:', identifier);
-    console.log('Login - Session ID before:', req.sessionID);
-    
     const user = await db.query.users.findFirst({
       where: (u, { or, eq }) => or(eq(u.email, identifier), eq(u.username, identifier)),
     });
     
     if (!user) {
-      console.log('User not found:', identifier);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     const ok = await bcrypt.compare(password, (user as any).passwordHash);
     if (!ok) {
-      console.log('Invalid password for user:', identifier);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     setSessionUser(req, (user as any).id);
-    console.log('Login successful for user:', identifier);
-    console.log('Session after setting user:', req.session);
-    console.log('Login - Session ID after:', req.sessionID);
     
-    // Save the session explicitly
     req.session.save((err) => {
       if (err) {
-        console.error('Error saving session:', err);
         return res.status(500).json({ error: 'Session save failed' });
       }
-      console.log('Session saved successfully');
-      console.log('Login - Final Session ID:', req.sessionID);
-      return res.json({ 
-        id: (user as any).id, 
-        username: (user as any).username, 
-        email: (user as any).email,
-        sessionId: req.sessionID // Include session ID in response for debugging
-      });
+      return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -373,15 +299,9 @@ app.post('/api/auth/logout', (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 app.get('/api/auth/me', async (req, res) => {
-  console.log('Auth me request - session:', req.session);
-  console.log('Auth me request - cookies:', req.headers.cookie);
-  console.log('Auth me - Session ID:', req.sessionID);
-  
   const userId = getSessionUserId(req);
-  console.log('Auth me - userId from session:', userId);
   
   if (!userId) {
-    console.log('Auth me - No userId found, returning 401');
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
@@ -392,14 +312,11 @@ app.get('/api/auth/me', async (req, res) => {
     });
     
     if (!user) {
-      console.log('Auth me - User not found in database:', userId);
       return res.status(401).json({ error: 'User not found' });
     }
     
-    console.log('Auth me - User found:', user);
     return res.json({ id: user.id, role: user.role });
   } catch (error) {
-    console.error('Error fetching user:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -408,20 +325,14 @@ app.get('/api/auth/me', async (req, res) => {
 app.use('/api/events', require('./routes/events').default);
 app.use('/api/ratings', require('./routes/ratings').default);
 app.use('/api/rewards', require('./routes/rewards').default);
-
-// Mount routers
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', require('./routes/admin').default);
 
-// Only start the server if not in Vercel environment
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
-  app.listen(env.PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`API listening on http://localhost:${env.PORT}`);
-  });
-}
+// Start the server
+app.listen(env.PORT, () => {
+  console.log(`API listening on http://localhost:${env.PORT}`);
+});
 
-// Export the app for Vercel serverless functions
 export { app };
 
 
