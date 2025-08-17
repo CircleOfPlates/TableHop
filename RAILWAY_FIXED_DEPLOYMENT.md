@@ -95,7 +95,10 @@ After deployment, verify:
 2. **API Documentation**: Visit `https://your-api-url.railway.app/api-docs`
    - Should show Swagger documentation
 
-3. **Frontend**: Visit `https://your-frontend-url.railway.app`
+3. **Frontend Health Check**: Visit `https://your-frontend-url.railway.app/health`
+   - Should return: `{"ok": true, "service": "tablehop-web", "timestamp": "..."}`
+
+4. **Frontend**: Visit `https://your-frontend-url.railway.app`
    - Should load the TableHop application
 
 ## 🛠️ Troubleshooting
@@ -123,6 +126,12 @@ After deployment, verify:
 1. Verify `DATABASE_URL` is set correctly
 2. Check if PostgreSQL service is running
 3. Ensure SSL is enabled for production
+
+### If Frontend Health Check Fails:
+
+1. Verify the `/health` route is accessible
+2. Check that the health endpoint returns proper JSON
+3. Ensure the Railway configuration has `healthcheckPath: "/health"`
 
 ## 📞 Need Help?
 
