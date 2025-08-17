@@ -25,7 +25,7 @@ app.use(cors({
   exposedHeaders: ['Set-Cookie']
 }));
 app.use(express.json());
-app.use(sessionMiddleware);
+app.use(sessionMiddleware as any);
 app.use(
   rateLimit({
     windowMs: 60_000,
@@ -90,10 +90,10 @@ app.get('/', (req, res) => {
 });
 
 // Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+app.use('/api-docs', swaggerUi.serve as any, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'TableHop API Documentation'
-}));
+}) as any);
 
 // Auth
 const signupSchema = z.object({

@@ -1,13 +1,12 @@
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
-import { pool } from './db/client';
 
 const PgStore = connectPg(session);
 
 function createStore() {
   try {
     const store = new PgStore({ 
-      pool, 
+      pool: require('./db/client').pool, 
       tableName: 'session', 
       createTableIfMissing: true
     });
