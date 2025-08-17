@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, boolean, timestamp, date, time, jsonb, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Users
 export const users = pgTable('users', {
@@ -138,5 +139,139 @@ export const pointRedemptions = pgTable('point_redemptions', {
   rewardType: varchar('reward_type', { length: 200 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Relations
+export const usersRelations = relations(users, ({ many, one }) => ({
+  participants: many(participants),
+  eventRatings: many(eventRatings, { relationName: 'rater' }),
+  ratedBy: many(eventRatings, { relationName: 'ratedUser' }),
+  testimonials: many(testimonials),
+  userBadges: many(userBadges),
+  userPoints: one(userPoints),
+  pointTransactions: many(pointTransactions),
+  pointRedemptions: many(pointRedemptions),
+}));
+
+export const neighbourhoodsRelations = relations(neighbourhoods, ({ many }) => ({
+  events: many(events),
+  testimonials: many(testimonials),
+}));
+
+export const eventsRelations = relations(events, ({ many, one }) => ({
+  participants: many(participants),
+  eventRatings: many(eventRatings),
+  dinnerGroups: many(dinnerGroups),
+  pointTransactions: many(pointTransactions),
+  pointRedemptions: many(pointRedemptions),
+  neighbourhood: one(neighbourhoods, {
+    fields: [events.neighbourhoodId],
+    references: [neighbourhoods.id],
+  }),
+}));
+
+export const participantsRelations = relations(participants, ({ one, many }) => ({
+  event: one(events, {
+    fields: [participants.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [participants.userId],
+    references: [users.id],
+  }),
+  partner: one(users, {
+    fields: [participants.partnerId],
+    references: [users.id],
+    relationName: 'partner',
+  }),
+  dinnerGroupsAsStarter: many(dinnerGroups, { relationName: 'starterParticipant' }),
+  dinnerGroupsAsMain: many(dinnerGroups, { relationName: 'mainParticipant' }),
+  dinnerGroupsAsDessert: many(dinnerGroups, { relationName: 'dessertParticipant' }),
+}));
+
+export const eventRatingsRelations = relations(eventRatings, ({ one }) => ({
+  event: one(events, {
+    fields: [eventRatings.eventId],
+    references: [events.id],
+  }),
+  rater: one(users, {
+    fields: [eventRatings.raterId],
+    references: [users.id],
+    relationName: 'rater',
+  }),
+  ratedUser: one(users, {
+    fields: [eventRatings.ratedUserId],
+    references: [users.id],
+    relationName: 'ratedUser',
+  }),
+}));
+
+export const testimonialsRelations = relations(testimonials, ({ one }) => ({
+  user: one(users, {
+    fields: [testimonials.userId],
+    references: [users.id],
+  }),
+  neighbourhood: one(neighbourhoods, {
+    fields: [testimonials.neighbourhoodId],
+    references: [neighbourhoods.id],
+  }),
+}));
+
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userPointsRelations = relations(userPoints, ({ one }) => ({
+  user: one(users, {
+    fields: [userPoints.userId],
+    references: [users.id],
+  }),
+}));
+
+export const pointTransactionsRelations = relations(pointTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [pointTransactions.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [pointTransactions.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const pointRedemptionsRelations = relations(pointRedemptions, ({ one }) => ({
+  user: one(users, {
+    fields: [pointRedemptions.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [pointRedemptions.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const dinnerGroupsRelations = relations(dinnerGroups, ({ one }) => ({
+  event: one(events, {
+    fields: [dinnerGroups.eventId],
+    references: [events.id],
+  }),
+  starterParticipant: one(participants, {
+    fields: [dinnerGroups.starterParticipantId],
+    references: [participants.id],
+    relationName: 'starterParticipant',
+  }),
+  mainParticipant: one(participants, {
+    fields: [dinnerGroups.mainParticipantId],
+    references: [participants.id],
+    relationName: 'mainParticipant',
+  }),
+  dessertParticipant: one(participants, {
+    fields: [dinnerGroups.dessertParticipantId],
+    references: [participants.id],
+    relationName: 'dessertParticipant',
+  }),
+}));
 
 

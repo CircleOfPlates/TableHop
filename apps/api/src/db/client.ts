@@ -11,7 +11,25 @@ export const pool = new Pool({
   } : false
 });
 
-export const db = drizzle(pool, { schema });
+// Create the database client with all schema and relations
+export const db = drizzle(pool, { 
+  schema: {
+    ...schema,
+    // Explicitly include all relations
+    usersRelations: schema.usersRelations,
+    neighbourhoodsRelations: schema.neighbourhoodsRelations,
+    eventsRelations: schema.eventsRelations,
+    participantsRelations: schema.participantsRelations,
+    eventRatingsRelations: schema.eventRatingsRelations,
+    testimonialsRelations: schema.testimonialsRelations,
+    userBadgesRelations: schema.userBadgesRelations,
+    userPointsRelations: schema.userPointsRelations,
+    pointTransactionsRelations: schema.pointTransactionsRelations,
+    pointRedemptionsRelations: schema.pointRedemptionsRelations,
+    dinnerGroupsRelations: schema.dinnerGroupsRelations,
+  }
+});
+
 export type DbClient = typeof db;
 
 
