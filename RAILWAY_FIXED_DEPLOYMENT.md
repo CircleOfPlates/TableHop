@@ -96,7 +96,7 @@ After deployment, verify:
    - Should show Swagger documentation
 
 3. **Frontend Health Check**: Visit `https://your-frontend-url.railway.app/health`
-   - Should return: `{"ok": true, "service": "tablehop-web", "timestamp": "..."}`
+   - Should return: `{"ok": true, "service": "tablehop-web", "timestamp": "...", "status": "healthy"}`
 
 4. **Frontend**: Visit `https://your-frontend-url.railway.app`
    - Should load the TableHop application
@@ -130,7 +130,7 @@ After deployment, verify:
 ### If Frontend Health Check Fails:
 
 1. Verify the `/health` route is accessible
-2. Check that the health endpoint returns proper JSON
+2. Check that Vite preview server allows all hosts (`allowedHosts: true`)
 3. Ensure the Railway configuration has `healthcheckPath: "/health"`
 
 ## 📞 Need Help?
