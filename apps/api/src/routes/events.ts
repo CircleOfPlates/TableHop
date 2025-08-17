@@ -78,6 +78,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
+    
+    // Validate that eventId is a valid number
+    if (isNaN(eventId)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+    
     const event = await db.query.events.findFirst({
       where: (e, { eq }) => eq(e.id, eventId),
     });
@@ -210,6 +216,12 @@ router.post('/:id/join', requireAuth, async (req, res) => {
   try {
     const user = (req as any).user;
     const eventId = parseInt(req.params.id);
+    
+    // Validate that eventId is a valid number
+    if (isNaN(eventId)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+    
     const parsed = joinEventSchema.safeParse({ ...req.body, eventId });
     
     if (!parsed.success) {
@@ -270,6 +282,11 @@ router.post('/:id/join', requireAuth, async (req, res) => {
 router.get('/:id/participants', async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
+    
+    // Validate that eventId is a valid number
+    if (isNaN(eventId)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
     
     const participantsList = await db.query.participants.findMany({
       where: (p, { eq }) => eq(p.eventId, eventId),

@@ -124,6 +124,11 @@ router.get('/event/:eventId', async (req, res) => {
   try {
     const eventId = parseInt(req.params.eventId);
     
+    // Validate that eventId is a valid number
+    if (isNaN(eventId)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+    
     const eventRatingsList = await db.query.eventRatings.findMany({
       where: (r, { eq }) => eq(r.eventId, eventId),
       with: {
