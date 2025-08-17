@@ -5,12 +5,11 @@ import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './env';
-import { sessionMiddleware } from './session';
 import { db } from './db/client';
 import { users } from './db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireAuth, setSessionUser, getSessionUserId } from './auth';
+import { requireAuth, requireAdmin, generateToken, getCurrentUser } from './auth';
 import profileRouter from './routes/profile';
 import { specs } from './swagger';
 
@@ -25,7 +24,6 @@ app.use(cors({
   exposedHeaders: ['Set-Cookie']
 }));
 app.use(express.json());
-app.use(sessionMiddleware as any);
 app.use(
   rateLimit({
     windowMs: 60_000,
@@ -56,23 +54,20 @@ app.use(
  */
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-// Session debug endpoint
-app.get('/api/session-debug', (req, res) => {
-  console.log('Session debug request:', {
-    sessionExists: !!req.session,
-    sessionId: req.sessionID,
-    sessionData: req.session ? Object.keys(req.session) : null,
-    userId: req.session ? (req.session as any).userId : null,
+// JWT debug endpoint
+app.get('/api/jwt-debug', (req, res) => {
+  const user = getCurrentUser(req);
+  console.log('JWT debug request:', {
+    user,
+    authHeader: req.headers.authorization,
     cookies: req.headers.cookie,
     origin: req.headers.origin,
     host: req.headers.host
   });
   
   res.json({
-    sessionExists: !!req.session,
-    sessionId: req.sessionID,
-    sessionData: req.session ? Object.keys(req.session) : null,
-    userId: req.session ? (req.session as any).userId : null,
+    user,
+    authHeader: req.headers.authorization,
     cookies: req.headers.cookie,
     origin: req.headers.origin,
     host: req.headers.host
@@ -148,6 +143,9 @@ const signupSchema = z.object({
  *                 email:
  *                   type: string
  *                   example: john@example.com
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *       400:
  *         description: Invalid input data
  *         content:
@@ -173,8 +171,20 @@ app.post('/api/auth/signup', async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const [inserted] = await db.insert(users).values({ username, email, passwordHash }).returning({ id: users.id });
-  setSessionUser(req, inserted.id);
-  return res.status(201).json({ id: inserted.id, username, email });
+  
+  // Generate JWT token
+  const token = generateToken({
+    userId: inserted.id,
+    username,
+    role: 'user'
+  });
+  
+  return res.status(201).json({ 
+    id: inserted.id, 
+    username, 
+    email,
+    token
+  });
 });
 
 const loginSchema = z.object({ identifier: z.string(), password: z.string() });
@@ -183,7 +193,7 @@ const loginSchema = z.object({ identifier: z.string(), password: z.string() });
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Authenticate user and create session
+ *     summary: Authenticate user and return JWT token
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -219,6 +229,9 @@ const loginSchema = z.object({ identifier: z.string(), password: z.string() });
  *                 email:
  *                   type: string
  *                   example: john@example.com
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *       401:
  *         description: Invalid credentials
  *         content:
@@ -236,8 +249,7 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     console.log('Login request received:', { 
       body: req.body, 
-      sessionExists: !!req.session,
-      sessionId: req.sessionID,
+      authHeader: req.headers.authorization,
       cookies: req.headers.cookie 
     });
     
@@ -262,18 +274,20 @@ app.post('/api/auth/login', async (req, res) => {
     
     console.log('User authenticated successfully:', { userId: (user as any).id, username: (user as any).username });
     
-    setSessionUser(req, (user as any).id);
+    // Generate JWT token
+    const token = generateToken({
+      userId: (user as any).id,
+      username: (user as any).username,
+      role: (user as any).role || 'user'
+    });
     
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save failed:', err);
-        return res.status(500).json({ error: 'Session save failed' });
-      }
-      console.log('Session saved successfully:', { 
-        sessionId: req.sessionID, 
-        userId: (req.session as any).userId 
-      });
-      return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
+    console.log('JWT token generated successfully');
+    
+    return res.json({ 
+      id: (user as any).id, 
+      username: (user as any).username, 
+      email: (user as any).email,
+      token
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -283,36 +297,12 @@ app.post('/api/auth/login', async (req, res) => {
 
 /**
  * @swagger
- * /api/auth/logout:
- *   post:
- *     summary: Logout user and destroy session
- *     tags: [Authentication]
- *     security:
- *       - sessionAuth: []
- *     responses:
- *       200:
- *         description: Logout successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- */
-app.post('/api/auth/logout', (req, res) => {
-  req.session?.destroy(() => res.json({ ok: true }));
-});
-
-/**
- * @swagger
  * /api/auth/me:
  *   get:
  *     summary: Get current user information
  *     tags: [Authentication]
  *     security:
- *       - sessionAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Current user information
@@ -324,6 +314,12 @@ app.post('/api/auth/logout', (req, res) => {
  *                 id:
  *                   type: integer
  *                   example: 1
+ *                 username:
+ *                   type: string
+ *                   example: johndoe
+ *                 email:
+ *                   type: string
+ *                   example: john@example.com
  *                 role:
  *                   type: string
  *                   enum: [user, admin]
@@ -341,34 +337,33 @@ app.post('/api/auth/logout', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.get('/api/auth/me', async (req, res) => {
+app.get('/api/auth/me', requireAuth, async (req, res) => {
   console.log('Auth/me request received:', { 
-    sessionExists: !!req.session,
-    sessionId: req.sessionID,
-    cookies: req.headers.cookie,
-    headers: req.headers
+    user: (req as any).user,
+    authHeader: req.headers.authorization,
+    cookies: req.headers.cookie
   });
   
-  const userId = getSessionUserId(req);
-  
-  if (!userId) {
-    console.log('No userId found in session, returning 401');
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const user = (req as any).user;
   
   try {
-    const user = await db.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, userId),
-      columns: { id: true, role: true }
+    const dbUser = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, user.userId),
+      columns: { id: true, username: true, email: true, role: true }
     });
     
-    if (!user) {
-      console.log('User not found in database for userId:', userId);
+    if (!dbUser) {
+      console.log('User not found in database for userId:', user.userId);
       return res.status(401).json({ error: 'User not found' });
     }
     
-    console.log('User found successfully:', { id: user.id, role: user.role });
-    return res.json({ id: user.id, role: user.role });
+    console.log('User found successfully:', { id: dbUser.id, username: dbUser.username, role: dbUser.role });
+    return res.json({ 
+      id: dbUser.id, 
+      username: dbUser.username, 
+      email: dbUser.email,
+      role: dbUser.role 
+    });
   } catch (error) {
     console.error('Auth/me error:', error);
     return res.status(500).json({ error: 'Internal server error' });

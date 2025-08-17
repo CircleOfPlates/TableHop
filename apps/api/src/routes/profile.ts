@@ -1,18 +1,18 @@
-import { Router } from 'express';
+import express from 'express';
 import { z } from 'zod';
 import { db } from '../db/client';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { getSessionUserId, requireAuth } from '../auth';
+import { getCurrentUser, requireAuth } from '../auth';
 
-const router = Router();
+const router = express.Router();
 
-const profileSchema = z.object({
-  name: z.string().max(200).optional(),
-  phone: z.string().max(50).optional(),
+const updateProfileSchema = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().optional(),
   address: z.string().optional(),
-  neighbourhood: z.string().optional(),
   bio: z.string().optional(),
+  neighbourhood: z.string().optional(),
   dietaryRestrictions: z.string().optional(),
   interests: z.array(z.string()).optional(),
   dateOfBirth: z.string().optional(),
@@ -26,53 +26,86 @@ const profileSchema = z.object({
  * @swagger
  * /api/profile:
  *   get:
- *     summary: Get current user's profile
+ *     summary: Get user profile
  *     tags: [Profile]
  *     security:
- *       - sessionAuth: []
- *     description: Retrieve the current user's profile information
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User profile retrieved successfully
+ *         description: User profile data
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/User'
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 username:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 bio:
+ *                   type: string
+ *                 neighbourhood:
+ *                   type: string
+ *                 dietaryRestrictions:
+ *                   type: string
+ *                 interests:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 dateOfBirth:
+ *                   type: string
+ *                 personalityType:
+ *                   type: string
+ *                   enum: [extrovert, introvert, ambivert]
+ *                 cookingExperience:
+ *                   type: string
+ *                   enum: [beginner, intermediate, advanced]
+ *                 preferredGroupSize:
+ *                   type: string
+ *                   enum: [small, medium, large]
+ *                 socialPreferences:
+ *                   type: array
+ *                   items:
+ *                     type: string
  *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Unauthorized
  *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Profile not found
  */
 router.get('/', requireAuth, async (req, res) => {
-  const userId = getSessionUserId(req)!;
-  const user = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.id, userId) });
-  if (!user) return res.status(404).json({ error: 'Not found' });
-  const { passwordHash, ...safe } = user as any;
-  res.json(safe);
+  try {
+    const user = (req as any).user;
+    const profile = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, user.userId),
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    return res.json(profile);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**
  * @swagger
  * /api/profile:
  *   put:
- *     summary: Update current user's profile
+ *     summary: Update user profile
  *     tags: [Profile]
  *     security:
- *       - sessionAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -82,103 +115,69 @@ router.get('/', requireAuth, async (req, res) => {
  *             properties:
  *               name:
  *                 type: string
- *                 maxLength: 200
- *                 description: User's full name
- *                 example: John Doe
  *               phone:
  *                 type: string
- *                 maxLength: 50
- *                 description: User's phone number
- *                 example: +1234567890
  *               address:
  *                 type: string
- *                 description: User's address
- *                 example: 123 Main St, City, State
- *               neighbourhood:
- *                 type: string
- *                 description: User's neighbourhood
- *                 example: Downtown District
  *               bio:
  *                 type: string
- *                 description: User's bio
- *                 example: I love cooking and meeting new people!
+ *               neighbourhood:
+ *                 type: string
  *               dietaryRestrictions:
  *                 type: string
- *                 description: User's dietary restrictions
- *                 example: Vegetarian, no nuts
  *               interests:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: User's interests
- *                 example: ["cooking", "travel", "music"]
  *               dateOfBirth:
  *                 type: string
- *                 format: date
- *                 description: User's date of birth
- *                 example: 1990-01-01
  *               personalityType:
  *                 type: string
  *                 enum: [extrovert, introvert, ambivert]
- *                 description: User's personality type
- *                 example: extrovert
  *               cookingExperience:
  *                 type: string
  *                 enum: [beginner, intermediate, advanced]
- *                 description: User's cooking experience level
- *                 example: intermediate
  *               preferredGroupSize:
  *                 type: string
  *                 enum: [small, medium, large]
- *                 description: User's preferred group size
- *                 example: medium
  *               socialPreferences:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: User's social preferences
- *                 example: ["casual", "formal", "outdoor"]
  *     responses:
  *       200:
  *         description: Profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
  *       400:
  *         description: Invalid input data
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Unauthorized
+ *       404:
+ *         description: Profile not found
  */
 router.put('/', requireAuth, async (req, res) => {
-  const userId = getSessionUserId(req)!;
-  const parsed = profileSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const data = parsed.data as any;
-  if (data.dateOfBirth) {
-    // pass through as date string
+  try {
+    const user = (req as any).user;
+    const parsed = updateProfileSchema.safeParse(req.body);
+    
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set(parsed.data)
+      .where(eq(users.id, user.userId))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    return res.json(updated);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-  const [updated] = await db
-    .update(users)
-    .set({ ...data })
-    .where(eq(users.id, userId))
-    .returning();
-  const { passwordHash, ...safe } = updated as any;
-  res.json(safe);
 });
 
 export default router;

@@ -1,397 +1,137 @@
-import { Router } from 'express'
-import { getSessionUserId } from '../auth'
-import { RewardsService } from '../services/rewards'
+import express from 'express';
+import { db } from '../db/client';
+import { requireAuth } from '../auth';
 
-const router = Router()
+const router = express.Router();
 
 /**
  * @swagger
  * /api/rewards/points:
  *   get:
- *     summary: Get user's points and transaction history
+ *     summary: Get user's points and badges
  *     tags: [Rewards]
  *     security:
- *       - sessionAuth: []
- *     description: Retrieve the current user's points balance and transaction history
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User points data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UserPoints'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// Get user's points and transaction history
-router.get('/points', async (req, res) => {
-  try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    const pointsData = await RewardsService.getUserPoints(userId)
-    res.json(pointsData)
-  } catch (error) {
-    console.error('Error fetching user points:', error)
-    res.status(500).json({ error: 'Failed to fetch user points' })
-  }
-})
-
-/**
- * @swagger
- * /api/rewards/badges:
- *   get:
- *     summary: Get user's earned badges
- *     tags: [Rewards]
- *     security:
- *       - sessionAuth: []
- *     description: Retrieve all badges that the current user has earned
- *     responses:
- *       200:
- *         description: User badges retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Badge'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// Get user's badges
-router.get('/badges', async (req, res) => {
-  try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    const badges = await RewardsService.getUserBadges(userId)
-    const badgeDefinitions = RewardsService.getBadgeDefinitions()
-    
-    // Map badges to their definitions
-    const userBadges = badges.map(badge => {
-      const definition = badgeDefinitions.find(def => def.id === badge.badgeType)
-      return {
-        ...badge,
-        ...definition,
-      }
-    })
-
-    res.json(userBadges)
-  } catch (error) {
-    console.error('Error fetching user badges:', error)
-    res.status(500).json({ error: 'Failed to fetch user badges' })
-  }
-})
-
-/**
- * @swagger
- * /api/rewards/badges/progress:
- *   get:
- *     summary: Get user's badge progress
- *     tags: [Rewards]
- *     security:
- *       - sessionAuth: []
- *     description: Retrieve the current user's progress towards all available badges
- *     responses:
- *       200:
- *         description: Badge progress retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Badge'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-/**
- * @swagger
- * /api/rewards/badges/progress:
- *   get:
- *     summary: Get user's badge progress
- *     tags: [Rewards]
- *     security:
- *       - sessionAuth: []
- *     description: Retrieve the current user's progress towards earning badges
- *     responses:
- *       200:
- *         description: Badge progress retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Badge'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// Get user's badge progress
-router.get('/badges/progress', async (req, res) => {
-  try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    const progress = await RewardsService.getUserBadgeProgress(userId)
-    res.json(progress)
-  } catch (error) {
-    console.error('Error fetching badge progress:', error)
-    res.status(500).json({ error: 'Failed to fetch badge progress' })
-  }
-})
-
-/**
- * @swagger
- * /api/rewards/badges/definitions:
- *   get:
- *     summary: Get all badge definitions
- *     tags: [Rewards]
- *     description: Retrieve all available badge definitions and their requirements
- *     responses:
- *       200:
- *         description: Badge definitions retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     example: first_host
- *                   name:
- *                     type: string
- *                     example: First Host
- *                   description:
- *                     type: string
- *                     example: Hosted your first dinner event
- *                   icon:
- *                     type: string
- *                     example: 🏠
- *                   category:
- *                     type: string
- *                     enum: [hosting, community, milestone]
- *                     example: hosting
- *                   required:
- *                     type: integer
- *                     example: 1
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// Get all badge definitions
-router.get('/badges/definitions', async (req, res) => {
-  try {
-    const definitions = RewardsService.getBadgeDefinitions()
-    res.json(definitions)
-  } catch (error) {
-    console.error('Error fetching badge definitions:', error)
-    res.status(500).json({ error: 'Failed to fetch badge definitions' })
-  }
-})
-
-/**
- * @swagger
- * /api/rewards/leaderboard:
- *   get:
- *     summary: Get points leaderboard
- *     tags: [Rewards]
- *     description: Retrieve the points leaderboard, optionally filtered by neighbourhood
- *     parameters:
- *       - in: query
- *         name: neighbourhoodId
- *         schema:
- *           type: integer
- *         description: Filter leaderboard by neighbourhood ID
- *         example: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of users to return in leaderboard
- *         example: 10
- *     responses:
- *       200:
- *         description: Leaderboard retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   userId:
- *                     type: integer
- *                     example: 1
- *                   points:
- *                     type: integer
- *                     example: 150
- *                   totalPointsEarned:
- *                     type: integer
- *                     example: 200
- *                   user:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                         example: 1
- *                       name:
- *                         type: string
- *                         example: John Doe
- *                       username:
- *                         type: string
- *                         example: johndoe
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// Get leaderboard
-router.get('/leaderboard', async (req, res) => {
-  try {
-    const neighbourhoodId = req.query.neighbourhoodId ? parseInt(req.query.neighbourhoodId as string) : undefined
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10
-
-    const leaderboard = await RewardsService.getLeaderboard(neighbourhoodId, limit)
-    res.json(leaderboard)
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error)
-    res.status(500).json({ error: 'Failed to fetch leaderboard' })
-  }
-})
-
-/**
- * @swagger
- * /api/rewards/badges/check:
- *   post:
- *     summary: Manually trigger badge checking (for testing)
- *     tags: [Rewards]
- *     security:
- *       - sessionAuth: []
- *     description: Manually trigger the badge checking algorithm for the current user
- *     responses:
- *       200:
- *         description: Badge check completed successfully
+ *         description: User's points and badges
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 message:
- *                   type: string
- *                   example: New badges awarded!
+ *                 points:
+ *                   type: integer
+ *                   example: 1250
+ *                 totalPoints:
+ *                   type: integer
+ *                   example: 2500
  *                 badges:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
  *                       id:
+ *                         type: integer
+ *                       badgeType:
  *                         type: string
- *                         example: first_host
- *                       name:
+ *                       awardedAt:
  *                         type: string
- *                         example: First Host
- *                       description:
- *                         type: string
- *                         example: Hosted your first dinner event
- *                       icon:
- *                         type: string
- *                         example: 🏠
- *                 count:
- *                   type: integer
- *                   example: 2
+ *                         format: date-time
  *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Unauthorized
  */
-// Manually trigger badge checking (for testing)
-router.post('/badges/check', async (req, res) => {
+router.get('/points', requireAuth, async (req, res) => {
   try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    const awardedBadges = await RewardsService.checkAndAwardBadges(userId)
+    const user = (req as any).user;
     
-    if (awardedBadges.length > 0) {
-      res.json({
-        message: 'New badges awarded!',
-        badges: awardedBadges,
-        count: awardedBadges.length
-      })
-    } else {
-      res.json({
-        message: 'No new badges to award',
-        badges: [],
-        count: 0
-      })
-    }
-  } catch (error) {
-    console.error('Error checking badges:', error)
-    res.status(500).json({ error: 'Failed to check badges' })
-  }
-})
+    // Get user's points
+    const userPoints = await db.query.userPoints.findFirst({
+      where: (up, { eq }) => eq(up.userId, user.userId),
+    });
 
-export default router
+    // Get user's badges
+    const userBadges = await db.query.userBadges.findMany({
+      where: (ub, { eq }) => eq(ub.userId, user.userId),
+    });
+
+    return res.json({
+      points: userPoints?.points || 0,
+      totalPoints: userPoints?.totalPointsEarned || 0,
+      badges: userBadges.map(ub => ({
+        id: ub.id,
+        badgeType: ub.badgeType,
+        awardedAt: ub.awardedAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Get rewards error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/rewards/leaderboard:
+ *   get:
+ *     summary: Get neighbourhood leaderboard
+ *     tags: [Rewards]
+ *     parameters:
+ *       - in: query
+ *         name: neighbourhoodId
+ *         schema:
+ *           type: integer
+ *         description: Neighbourhood ID to filter by
+ *     responses:
+ *       200:
+ *         description: Leaderboard data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   rank:
+ *                     type: integer
+ *                   userId:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   points:
+ *                     type: integer
+ *                   badges:
+ *                     type: integer
+ */
+router.get('/leaderboard', async (req, res) => {
+  try {
+    // Get leaderboard data
+    const leaderboard = await db.query.userPoints.findMany({
+      orderBy: (up, { desc }) => [desc(up.points)],
+      limit: 20,
+    });
+
+    // Add rank and badge count
+    const leaderboardWithRank = await Promise.all(
+      leaderboard.map(async (entry, index) => {
+        const badgeCount = await db.query.userBadges.findMany({
+          where: (ub, { eq }) => eq(ub.userId, entry.userId),
+        });
+
+        return {
+          rank: index + 1,
+          userId: entry.userId,
+          points: entry.points,
+          badges: badgeCount.length,
+        };
+      })
+    );
+
+    return res.json(leaderboardWithRank);
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;

@@ -1,80 +1,185 @@
-import { Router } from 'express'
-import { z } from 'zod'
-import { db } from '../db/client'
-import { events, participants, users, neighbourhoods } from '../db/schema'
-import { eq, desc, and, sql } from 'drizzle-orm'
-import { getSessionUserId } from '../auth'
+import express from 'express';
+import { z } from 'zod';
+import { db } from '../db/client';
+import { events, participants } from '../db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { getCurrentUser, requireAuth } from '../auth';
 
-const router = Router()
+const router = express.Router();
+
+const createEventSchema = z.object({
+  title: z.string().min(1),
+  description: z.string(),
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  neighbourhoodId: z.number(),
+  format: z.enum(['rotating', 'hosted']),
+  totalSpots: z.number().min(2),
+  hostId: z.number(),
+});
+
+const joinEventSchema = z.object({
+  eventId: z.number(),
+  coursePreference: z.enum(['starter', 'main', 'dessert']).optional(),
+  isHost: z.boolean().default(false),
+});
 
 /**
  * @swagger
  * /api/events:
  *   get:
- *     summary: Get all available events
+ *     summary: Get all events
  *     tags: [Events]
- *     description: Retrieve a list of all upcoming events with their details
  *     responses:
  *       200:
- *         description: List of events retrieved successfully
+ *         description: List of events
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Event'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-// Get all available events
 router.get('/', async (req, res) => {
   try {
-    const eventList = await db.select({
-      id: events.id,
-      title: events.title,
-      description: events.description,
-      date: events.date,
-      startTime: events.startTime,
-      endTime: events.endTime,
-      totalSpots: events.totalSpots,
-      spotsRemaining: events.spotsRemaining,
-      format: events.format,
-      isWaitlist: events.isWaitlist,
-      createdAt: events.createdAt,
-      neighbourhood: neighbourhoods.name,
-    }).from(events)
-    .leftJoin(neighbourhoods, eq(events.neighbourhoodId, neighbourhoods.id))
-    .where(sql`${events.date} >= CURRENT_DATE`)
-    .orderBy(desc(events.date))
-
-    res.json(eventList)
+    const allEvents = await db.query.events.findMany({
+      orderBy: [desc(events.date)],
+    });
+    return res.json(allEvents);
   } catch (error) {
-    console.error('Error fetching events:', error)
-    res.status(500).json({ error: 'Failed to fetch events' })
+    console.error('Get events error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-})
-
-// Register for an event
-const registerSchema = z.object({
-  eventId: z.number(),
-  coursePreference: z.enum(['starter', 'main', 'dessert']).optional(),
-  bringPartner: z.boolean(),
-  partnerName: z.string().optional(),
-  partnerEmail: z.string().email().optional(),
-})
+});
 
 /**
  * @swagger
- * /api/events/register:
+ * /api/events/{id}:
+ *   get:
+ *     summary: Get event by ID
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Event details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Event'
+ *       404:
+ *         description: Event not found
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const event = await db.query.events.findFirst({
+      where: (e, { eq }) => eq(e.id, eventId),
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    return res.json(event);
+  } catch (error) {
+    console.error('Get event error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events:
  *   post:
- *     summary: Register for an event
+ *     summary: Create a new event
  *     tags: [Events]
  *     security:
- *       - sessionAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - date
+ *               - startTime
+ *               - endTime
+ *               - neighbourhoodId
+ *               - format
+ *               - totalSpots
+ *               - hostId
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               startTime:
+ *                 type: string
+ *               endTime:
+ *                 type: string
+ *               neighbourhoodId:
+ *                 type: integer
+ *               format:
+ *                 type: string
+ *                 enum: [rotating, hosted]
+ *               totalSpots:
+ *                 type: integer
+ *               hostId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Event created successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const parsed = createEventSchema.safeParse(req.body);
+    
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+
+    const [event] = await db.insert(events).values({
+      ...parsed.data,
+      spotsRemaining: parsed.data.totalSpots,
+    }).returning();
+    return res.status(201).json(event);
+  } catch (error) {
+    console.error('Create event error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/{id}/join:
+ *   post:
+ *     summary: Join an event
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     requestBody:
  *       required: true
  *       content:
@@ -83,260 +188,103 @@ const registerSchema = z.object({
  *             type: object
  *             required:
  *               - eventId
- *               - bringPartner
  *             properties:
  *               eventId:
  *                 type: integer
- *                 description: ID of the event to register for
- *                 example: 1
  *               coursePreference:
  *                 type: string
  *                 enum: [starter, main, dessert]
- *                 description: Course preference for rotating dinners
- *                 example: main
- *               bringPartner:
+ *               isHost:
  *                 type: boolean
- *                 description: Whether the user is bringing a partner
- *                 example: true
- *               partnerName:
- *                 type: string
- *                 description: Partner's name (required if bringPartner is true)
- *                 example: Jane Doe
- *               partnerEmail:
- *                 type: string
- *                 format: email
- *                 description: Partner's email (required if bringPartner is true)
- *                 example: jane@example.com
  *     responses:
- *       201:
- *         description: Successfully registered for event
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Successfully registered for event
- *                 registration:
- *                   $ref: '#/components/schemas/Participant'
- *                 eventTitle:
- *                   type: string
- *                   example: Summer Rotating Dinner
- *                 eventDate:
- *                   type: string
- *                   format: date
- *                   example: 2024-09-20
+ *       200:
+ *         description: Successfully joined event
  *       400:
- *         description: Bad request (event full, already registered, invalid data)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Invalid input data
  *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Unauthorized
  *       404:
  *         description: Event not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-router.post('/register', async (req, res) => {
+router.post('/:id/join', requireAuth, async (req, res) => {
   try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    const { eventId, coursePreference, bringPartner, partnerName, partnerEmail } = registerSchema.parse(req.body)
-
-    // Check if event exists and has available spots
-    const [event] = await db.select().from(events).where(eq(events.id, eventId))
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' })
-    }
-
-    if (event.spotsRemaining === 0 && !event.isWaitlist) {
-      return res.status(400).json({ error: 'Event is full' })
-    }
-
-    // Check if user is already registered
-    const existingRegistration = await db.select().from(participants)
-      .where(and(eq(participants.eventId, eventId), eq(participants.userId, userId)))
+    const user = (req as any).user;
+    const eventId = parseInt(req.params.id);
+    const parsed = joinEventSchema.safeParse({ ...req.body, eventId });
     
-    if (existingRegistration.length > 0) {
-      return res.status(400).json({ error: 'Already registered for this event' })
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
     }
 
-    // Validate rotating dinner requirements
-    if (event.format === 'rotating') {
-      if (!coursePreference) {
-        return res.status(400).json({ error: 'Course preference is required for rotating dinners' })
-      }
-      if (!bringPartner) {
-        return res.status(400).json({ error: 'Partner is required for rotating dinners' })
-      }
-      if (!partnerName || !partnerEmail) {
-        return res.status(400).json({ error: 'Partner details are required for rotating dinners' })
-      }
+    // Check if event exists
+    const event = await db.query.events.findFirst({
+      where: (e, { eq }) => eq(e.id, eventId),
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Create registration
-    const [registration] = await db.insert(participants).values({
+    // Check if user is already participating
+    const existingParticipation = await db.query.participants.findFirst({
+      where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, user.userId)),
+    });
+
+    if (existingParticipation) {
+      return res.status(400).json({ error: 'Already participating in this event' });
+    }
+
+    // Join the event
+    const [participation] = await db.insert(participants).values({
       eventId,
-      userId,
-      coursePreference: coursePreference || null,
-      courseAssigned: null, // Will be assigned during matching
-      isHost: false, // Will be determined during matching
-      registeredAt: new Date(),
-    }).returning()
+      userId: user.userId,
+      coursePreference: parsed.data.coursePreference,
+      isHost: parsed.data.isHost,
+    }).returning();
 
-    // Update event spots
-    if (!event.isWaitlist) {
-      await db.update(events)
-        .set({ spotsRemaining: event.spotsRemaining - 1 })
-        .where(eq(events.id, eventId))
-    }
-
-    // If partner is being brought, create a guest record (simplified for now)
-    if (bringPartner && partnerName && partnerEmail) {
-      // In a real implementation, you might want to create a guest user or track partners differently
-      console.log(`Partner registration: ${partnerName} (${partnerEmail}) for event ${eventId}`)
-    }
-
-    res.status(201).json({
-      message: 'Successfully registered for event',
-      registration,
-      eventTitle: event.title,
-      eventDate: event.date,
-    })
-
+    return res.json(participation);
   } catch (error) {
-    console.error('Error registering for event:', error)
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input data', details: error.flatten() })
-    }
-    res.status(500).json({ error: 'Failed to register for event' })
+    console.error('Join event error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-})
+});
 
 /**
  * @swagger
- * /api/events/my-events:
+ * /api/events/{id}/participants:
  *   get:
- *     summary: Get user's registered events
+ *     summary: Get event participants
  *     tags: [Events]
- *     security:
- *       - sessionAuth: []
- *     description: Retrieve all events that the current user has registered for
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
- *         description: User's events retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                     example: 1
- *                   title:
- *                     type: string
- *                     example: Summer Rotating Dinner
- *                   description:
- *                     type: string
- *                     example: Join us for a delightful rotating dinner experience
- *                   date:
- *                     type: string
- *                     format: date
- *                     example: 2024-09-20
- *                   startTime:
- *                     type: string
- *                     example: 18:00
- *                   endTime:
- *                     type: string
- *                     example: 22:00
- *                   format:
- *                     type: string
- *                     enum: [rotating, hosted]
- *                     example: rotating
- *                   neighbourhood:
- *                     type: string
- *                     example: Downtown District
- *                   coursePreference:
- *                     type: string
- *                     enum: [starter, main, dessert]
- *                     example: main
- *                   courseAssigned:
- *                     type: string
- *                     enum: [starter, main, dessert]
- *                     example: main
- *                   isHost:
- *                     type: boolean
- *                     example: true
- *                   registeredAt:
- *                     type: string
- *                     format: date-time
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: List of participants
+ *       404:
+ *         description: Event not found
  */
-// Get user's registered events
-router.get('/my-events', async (req, res) => {
+router.get('/:id/participants', async (req, res) => {
   try {
-    const userId = getSessionUserId(req)
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
+    const eventId = parseInt(req.params.id);
+    
+    const participantsList = await db.query.participants.findMany({
+      where: (p, { eq }) => eq(p.eventId, eventId),
+      with: {
+        user: true,
+      },
+    });
 
-    const userEvents = await db.select({
-      id: events.id,
-      title: events.title,
-      description: events.description,
-      date: events.date,
-      startTime: events.startTime,
-      endTime: events.endTime,
-      format: events.format,
-      neighbourhood: neighbourhoods.name,
-      coursePreference: participants.coursePreference,
-      courseAssigned: participants.courseAssigned,
-      isHost: participants.isHost,
-      registeredAt: participants.registeredAt,
-    }).from(participants)
-    .innerJoin(events, eq(participants.eventId, events.id))
-    .leftJoin(neighbourhoods, eq(events.neighbourhoodId, neighbourhoods.id))
-    .where(eq(participants.userId, userId))
-    .orderBy(desc(events.date))
-
-    res.json(userEvents)
+    return res.json(participantsList);
   } catch (error) {
-    console.error('Error fetching user events:', error)
-    res.status(500).json({ error: 'Failed to fetch user events' })
+    console.error('Get participants error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-})
+});
 
-export default router
+export default router;
 
 
