@@ -19,7 +19,10 @@ const app = express();
 app.use(helmet());
 app.use(cors({ 
   origin: env.FRONTEND_URL || 'http://localhost:5173', 
-  credentials: true 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }));
 app.use(express.json());
 app.use(sessionMiddleware);
@@ -52,6 +55,29 @@ app.use(
  *                   example: true
  */
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Session debug endpoint
+app.get('/api/session-debug', (req, res) => {
+  console.log('Session debug request:', {
+    sessionExists: !!req.session,
+    sessionId: req.sessionID,
+    sessionData: req.session ? Object.keys(req.session) : null,
+    userId: req.session ? (req.session as any).userId : null,
+    cookies: req.headers.cookie,
+    origin: req.headers.origin,
+    host: req.headers.host
+  });
+  
+  res.json({
+    sessionExists: !!req.session,
+    sessionId: req.sessionID,
+    sessionData: req.session ? Object.keys(req.session) : null,
+    userId: req.session ? (req.session as any).userId : null,
+    cookies: req.headers.cookie,
+    origin: req.headers.origin,
+    host: req.headers.host
+  });
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -208,6 +234,13 @@ const loginSchema = z.object({ identifier: z.string(), password: z.string() });
  */
 app.post('/api/auth/login', async (req, res) => {
   try {
+    console.log('Login request received:', { 
+      body: req.body, 
+      sessionExists: !!req.session,
+      sessionId: req.sessionID,
+      cookies: req.headers.cookie 
+    });
+    
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const { identifier, password } = parsed.data;
@@ -217,23 +250,33 @@ app.post('/api/auth/login', async (req, res) => {
     });
     
     if (!user) {
+      console.log('User not found for identifier:', identifier);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     const ok = await bcrypt.compare(password, (user as any).passwordHash);
     if (!ok) {
+      console.log('Invalid password for user:', (user as any).id);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    
+    console.log('User authenticated successfully:', { userId: (user as any).id, username: (user as any).username });
     
     setSessionUser(req, (user as any).id);
     
     req.session.save((err) => {
       if (err) {
+        console.error('Session save failed:', err);
         return res.status(500).json({ error: 'Session save failed' });
       }
+      console.log('Session saved successfully:', { 
+        sessionId: req.sessionID, 
+        userId: (req.session as any).userId 
+      });
       return res.json({ id: (user as any).id, username: (user as any).username, email: (user as any).email });
     });
   } catch (error) {
+    console.error('Login error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -299,9 +342,17 @@ app.post('/api/auth/logout', (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 app.get('/api/auth/me', async (req, res) => {
+  console.log('Auth/me request received:', { 
+    sessionExists: !!req.session,
+    sessionId: req.sessionID,
+    cookies: req.headers.cookie,
+    headers: req.headers
+  });
+  
   const userId = getSessionUserId(req);
   
   if (!userId) {
+    console.log('No userId found in session, returning 401');
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
@@ -312,11 +363,14 @@ app.get('/api/auth/me', async (req, res) => {
     });
     
     if (!user) {
+      console.log('User not found in database for userId:', userId);
       return res.status(401).json({ error: 'User not found' });
     }
     
+    console.log('User found successfully:', { id: user.id, role: user.role });
     return res.json({ id: user.id, role: user.role });
   } catch (error) {
+    console.error('Auth/me error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
