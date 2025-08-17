@@ -21,9 +21,22 @@ export const tokenManager = {
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  
+  // Convert headers to a plain object
+  const existingHeaders: Record<string, string> = {};
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        existingHeaders[key] = value;
+      });
+    } else if (typeof options.headers === 'object') {
+      Object.assign(existingHeaders, options.headers);
+    }
+  }
+
   const headers: Record<string, string> = { 
     'Content-Type': 'application/json', 
-    ...(options.headers || {}) 
+    ...existingHeaders
   };
 
   // Add JWT token to Authorization header if available
