@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { api } from '../lib/api'
+import { api, tokenManager } from '../lib/api'
 
 type AuthUser = { id: number; role?: string } | null
 
@@ -24,11 +24,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (identifier: string, password: string) => {
     try {
       console.log('🔐 Attempting login...')
-      const response = await api<{ id: number; username: string; email: string }>('/api/auth/login', {
+      const response = await api<{ id: number; username: string; email: string; token: string }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ identifier, password })
       })
       console.log('✅ Login successful:', response)
+      
+      // Store JWT token
+      if (response.token) {
+        tokenManager.setToken(response.token);
+        console.log('🔑 JWT token stored');
+      }
       
       // After login, fetch the user data with role
       const userData = await api<AuthUser>('/api/auth/me')
@@ -43,7 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       console.log('🚪 Logging out...')
-      await api('/api/auth/logout', { method: 'POST' })
+      // Remove JWT token from localStorage
+      tokenManager.removeToken();
       setUser(null)
       console.log('✅ Logout successful')
     } catch (error) {
@@ -62,6 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.log('❌ Auth check failed (user not logged in):', error)
         setUser(null)
+        // Clear any invalid token
+        tokenManager.removeToken();
       } finally {
         setIsLoading(false)
       }

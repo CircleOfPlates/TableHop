@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { api } from '../lib/api'
+import { api, tokenManager } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { toast } from 'sonner'
 import { Input, Button } from '../components/ui'
@@ -53,7 +53,17 @@ export function SignupForm() {
   })
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await api('/api/auth/signup', { method: 'POST', body: JSON.stringify(values) })
+      const response = await api<{ id: number; username: string; email: string; token: string }>('/api/auth/signup', { 
+        method: 'POST', 
+        body: JSON.stringify(values) 
+      })
+      
+      // Store JWT token
+      if (response.token) {
+        tokenManager.setToken(response.token);
+        console.log('🔑 JWT token stored after signup');
+      }
+      
       const me = await api<{ id: number; role?: string }>('/api/auth/me')
       setUser(me)
       toast.success('Account created successfully! Please complete your profile.')
