@@ -45,6 +45,35 @@ router.get('/users', requireAdmin, async (req, res) => {
 
 /**
  * @swagger
+ * /api/admin/neighbourhoods:
+ *   get:
+ *     summary: Get all neighbourhoods (admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of neighbourhoods
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.get('/neighbourhoods', requireAdmin, async (req, res) => {
+  try {
+    const allNeighbourhoods = await db.query.neighbourhoods.findMany({
+      orderBy: [neighbourhoods.name],
+    });
+
+    return res.json(allNeighbourhoods);
+  } catch (error) {
+    console.error('Get neighbourhoods error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
  * /api/admin/events:
  *   get:
  *     summary: Get all events (admin only)
@@ -53,7 +82,7 @@ router.get('/users', requireAdmin, async (req, res) => {
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all events
+ *         description: List of events with pagination
  *       401:
  *         description: Unauthorized
  *       403:
@@ -78,7 +107,30 @@ router.get('/events', requireAdmin, async (req, res) => {
       orderBy: [desc(events.date)],
     });
 
-    return res.json(allEvents);
+    // Transform the data to match frontend expectations
+    const transformedEvents = allEvents.map(event => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      totalSpots: event.totalSpots,
+      spotsRemaining: event.spotsRemaining,
+      format: event.format,
+      neighbourhood: event.neighbourhood?.name || 'Unknown', // Extract neighbourhood name
+      createdAt: event.createdAt,
+    }));
+
+    return res.json({
+      events: transformedEvents,
+      pagination: {
+        page: 1,
+        limit: transformedEvents.length,
+        total: transformedEvents.length,
+        pages: 1,
+      },
+    });
   } catch (error) {
     console.error('Get events error:', error);
     return res.status(500).json({ error: 'Internal server error' });

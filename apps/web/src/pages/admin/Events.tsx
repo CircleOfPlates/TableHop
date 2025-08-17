@@ -22,6 +22,14 @@ interface Event {
   createdAt: string
 }
 
+interface Neighbourhood {
+  id: number
+  name: string
+  city: string
+  state: string
+  zip: string
+}
+
 const eventSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
@@ -41,6 +49,11 @@ export default function AdminEvents() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-events', page],
     queryFn: () => api<{ events: Event[], pagination: any }>(`/api/admin/events?page=${page}`),
+  })
+
+  const { data: neighbourhoods } = useQuery({
+    queryKey: ['admin-neighbourhoods'],
+    queryFn: () => api<Neighbourhood[]>('/api/admin/neighbourhoods'),
   })
 
   const createEventMutation = useMutation({
@@ -111,7 +124,7 @@ export default function AdminEvents() {
                 <div>Actions</div>
               </div>
 
-              {data?.events.map((event) => (
+              {data?.events?.map((event) => (
                 <div key={event.id} className="grid grid-cols-7 gap-4 items-center py-3 border-b last:border-b-0">
                   <div className="font-medium">{event.title}</div>
                   <div className="text-sm">{new Date(event.date).toLocaleDateString()}</div>
@@ -120,15 +133,21 @@ export default function AdminEvents() {
                   <div className="text-sm capitalize">{event.format}</div>
                   <div className="text-sm">{event.neighbourhood}</div>
                   <div className="flex gap-2">
-                                         <Button variant="outline" onClick={() => window.open(`/admin/events/${event.id}`, '_blank')}>
+                    <Button variant="outline" onClick={() => window.open(`/admin/events/${event.id}`, '_blank')}>
                       Edit
                     </Button>
-                                         <Button variant="outline" onClick={() => handleDeleteEvent(event.id)}>
+                    <Button variant="outline" onClick={() => handleDeleteEvent(event.id)}>
                       Delete
                     </Button>
                   </div>
                 </div>
               ))}
+
+              {data?.events?.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No events found. Create your first event to get started.
+                </div>
+              )}
             </div>
           )}
 
@@ -162,9 +181,13 @@ export default function AdminEvents() {
 
       <Dialog.Root open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <Dialog.Content>
-                            <Dialog.Title>Create New Event</Dialog.Title>
-                  <Dialog.Description>Fill in the details for the new dinner event.</Dialog.Description>
-          <CreateEventForm onSubmit={createEventMutation.mutate} isLoading={createEventMutation.isPending} />
+          <Dialog.Title>Create New Event</Dialog.Title>
+          <Dialog.Description>Fill in the details for the new dinner event.</Dialog.Description>
+          <CreateEventForm 
+            onSubmit={createEventMutation.mutate} 
+            isLoading={createEventMutation.isPending}
+            neighbourhoods={neighbourhoods || []}
+          />
         </Dialog.Content>
       </Dialog.Root>
       </div>
@@ -172,7 +195,15 @@ export default function AdminEvents() {
   )
 }
 
-function CreateEventForm({ onSubmit, isLoading }: { onSubmit: (data: z.infer<typeof eventSchema>) => void, isLoading: boolean }) {
+function CreateEventForm({ 
+  onSubmit, 
+  isLoading, 
+  neighbourhoods 
+}: { 
+  onSubmit: (data: z.infer<typeof eventSchema>) => void, 
+  isLoading: boolean,
+  neighbourhoods: Neighbourhood[]
+}) {
   const form = useForm<z.infer<typeof eventSchema>>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
@@ -246,8 +277,18 @@ function CreateEventForm({ onSubmit, isLoading }: { onSubmit: (data: z.infer<typ
       </div>
 
       <div>
-        <Label>Neighbourhood ID</Label>
-        <Input type="number" {...form.register('neighbourhoodId', { valueAsNumber: true })} />
+        <Label>Neighbourhood</Label>
+        <select 
+          {...form.register('neighbourhoodId', { valueAsNumber: true })} 
+          className="w-full px-3 py-2 border rounded-md"
+        >
+          <option value="">Select a neighbourhood</option>
+          {neighbourhoods?.map((neighbourhood: Neighbourhood) => (
+            <option key={neighbourhood.id} value={neighbourhood.id}>
+              {neighbourhood.name}
+            </option>
+          ))}
+        </select>
         {form.formState.errors.neighbourhoodId && (
           <p className="text-red-600 text-sm mt-1">{form.formState.errors.neighbourhoodId.message}</p>
         )}
