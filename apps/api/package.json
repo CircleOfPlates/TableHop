@@ -7,8 +7,10 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "db:push": "drizzle-kit push",
+    "db:push": "drizzle-kit push:pg --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio",
+    "db:reset": "ts-node scripts/reset-database.ts",
+    "db:seed": "ts-node scripts/create-dummy-data.ts",
     "create-admin": "ts-node scripts/create-admin.ts",
     "test-jwt": "node test-jwt.js"
   },
