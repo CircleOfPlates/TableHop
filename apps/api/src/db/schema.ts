@@ -42,7 +42,6 @@ export const events = pgTable('events', {
   startTime: time('start_time', { withTimezone: false }).notNull(),
   endTime: time('end_time', { withTimezone: false }).notNull(),
   totalSpots: integer('total_spots').notNull(),
-  spotsRemaining: integer('spots_remaining').notNull(),
   isWaitlist: boolean('is_waitlist').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   format: varchar('format', { length: 20 }).notNull(), // 'rotating' | 'hosted'

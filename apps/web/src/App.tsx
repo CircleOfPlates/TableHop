@@ -6,6 +6,7 @@ import { LoginForm, SignupForm } from './pages/Auth'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Events from './pages/Events'
+import EventDetails from './pages/EventDetails'
 import Dashboard from './pages/Dashboard'
 import Rewards from './pages/Rewards'
 import HowItWorks from './pages/HowItWorks'
@@ -49,6 +50,7 @@ function App() {
               <Route path="/admin/analytics" component={AdminAnalytics} />
               <Route path="/admin/admins" component={AdminAdmins} />
               <Route path="/auth-test" component={AuthTest} />
+              <Route path="/event/:id" component={EventDetails} />
               <Route>
                 <Redirect to="/" />
               </Route>

@@ -289,7 +289,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" onClick={() => setLocation('/events')}>
+                  <Button variant="outline" onClick={() => setLocation(`/event/${event.id}`)}>
                     View Details
                   </Button>
                 </div>

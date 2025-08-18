@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { toast } from 'sonner'
 
 import AuthGuard from '../components/AuthGuard'
-import { Calendar, Clock, MapPin, Users, ChefHat, Home } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, ChefHat, Home, Search } from 'lucide-react'
 
 interface Event {
   id: number
@@ -22,12 +22,18 @@ interface Event {
   createdAt: string
 }
 
+interface User {
+  id: number
+  username: string
+  name: string
+  email: string
+}
+
 interface EventRegistration {
   eventId: number
   coursePreference?: 'starter' | 'main' | 'dessert'
-  bringPartner: boolean
-  partnerName?: string
-  partnerEmail?: string
+  isHost?: boolean
+  partnerId?: number
 }
 
 export default function Events() {
@@ -36,8 +42,11 @@ export default function Events() {
   const [registrationData, setRegistrationData] = useState<EventRegistration>({
     eventId: 0,
     coursePreference: undefined,
-    bringPartner: false,
+    isHost: false,
   })
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const queryClient = useQueryClient()
 
   const { data: events, isLoading } = useQuery({
@@ -45,13 +54,25 @@ export default function Events() {
     queryFn: () => api<Event[]>('/api/events'),
   })
 
+  // Fetch user's events to check participation
+  const { data: userEvents } = useQuery({
+    queryKey: ['user-events'],
+    queryFn: () => api<any[]>('/api/events/my-events'),
+  })
+
+  // Create a set of event IDs that the user is already participating in
+  const userParticipatingEventIds = new Set(userEvents?.map((event: any) => event.id) || [])
+
   const registerMutation = useMutation({
     mutationFn: (data: EventRegistration) =>
-      api('/api/events/register', { method: 'POST', body: JSON.stringify(data) }),
+      api(`/api/events/${data.eventId}/join`, { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['user-events'] })
       setIsRegistrationOpen(false)
       setSelectedEvent(null)
+      setPartnerSearch('')
+      setFilteredUsers([])
       toast.success('Successfully registered for event!')
     },
     onError: (error: any) => {
@@ -61,8 +82,38 @@ export default function Events() {
 
   const handleRegister = (event: Event) => {
     setSelectedEvent(event)
-    setRegistrationData({ ...registrationData, eventId: event.id })
+    setRegistrationData({ 
+      eventId: event.id,
+      coursePreference: undefined,
+      isHost: false,
+    })
     setIsRegistrationOpen(true)
+  }
+
+  const handlePartnerSearch = async (searchTerm: string) => {
+    setPartnerSearch(searchTerm)
+    
+    if (!searchTerm.trim() || searchTerm.trim().length < 2) {
+      setFilteredUsers([])
+      setShowPartnerDropdown(false)
+      return
+    }
+
+    try {
+      const response = await api<User[]>(`/api/events/partners/search?q=${encodeURIComponent(searchTerm.trim())}`)
+      setFilteredUsers(response)
+      setShowPartnerDropdown(response.length > 0)
+    } catch (error) {
+      console.error('Partner search error:', error)
+      setFilteredUsers([])
+      setShowPartnerDropdown(false)
+    }
+  }
+
+  const selectPartner = (user: User) => {
+    setRegistrationData(prev => ({ ...prev, partnerId: user.id }))
+    setPartnerSearch(user.name)
+    setShowPartnerDropdown(false)
   }
 
   const handleSubmitRegistration = () => {
@@ -71,14 +122,18 @@ export default function Events() {
       return
     }
 
-    if (selectedEvent?.format === 'rotating' && !registrationData.coursePreference) {
-      toast.error('Please select a course preference for rotating dinners')
-      return
-    }
-
-    if (registrationData.bringPartner && (!registrationData.partnerName || !registrationData.partnerEmail)) {
-      toast.error('Please provide partner details')
-      return
+    if (selectedEvent?.format === 'rotating') {
+      // For rotating dinners, course preference is required
+      if (!registrationData.coursePreference) {
+        toast.error('Please select a course preference for rotating dinners')
+        return
+      }
+      
+      // For rotating dinners, partner is required
+      if (!registrationData.partnerId) {
+        toast.error('Partner is required for rotating dinners. Please select a partner.')
+        return
+      }
     }
 
     registerMutation.mutate(registrationData)
@@ -110,7 +165,7 @@ export default function Events() {
         <div>
           <h1 className="text-3xl font-bold">Upcoming Dinner Events</h1>
           <p className="text-muted-foreground mt-2">
-            Join your neighbors for memorable dining experiences in your community
+            Join your neighbors for memorable dining experiences in your community. Only upcoming events are shown.
           </p>
         </div>
 
@@ -157,7 +212,7 @@ export default function Events() {
 
         {/* Events List */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">Available Events</h2>
+          <h2 className="text-2xl font-semibold">Upcoming Events</h2>
           
           {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -175,9 +230,15 @@ export default function Events() {
           ) : events?.length === 0 ? (
             <Card>
               <div className="p-8 text-center">
-                <h3 className="text-lg font-semibold mb-2">No Events Available</h3>
-                <p className="text-muted-foreground">
-                  Check back soon for upcoming dinner events in your neighborhood!
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No Upcoming Events</h3>
+                <p className="text-muted-foreground mb-4">
+                  There are no upcoming dinner events scheduled at the moment.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Check back soon or consider hosting your own event to bring the community together!
                 </p>
               </div>
             </Card>
@@ -220,10 +281,15 @@ export default function Events() {
                       </Badge>
                       <Button
                         onClick={() => handleRegister(event)}
-                        disabled={event.spotsRemaining === 0 && !event.isWaitlist}
+                        disabled={event.spotsRemaining === 0 && !event.isWaitlist || userParticipatingEventIds.has(event.id)}
                         className="w-full"
                       >
-                        {event.spotsRemaining === 0 && !event.isWaitlist ? 'Full' : 'Register'}
+                        {userParticipatingEventIds.has(event.id) 
+                          ? 'Already Registered' 
+                          : event.spotsRemaining === 0 && !event.isWaitlist 
+                            ? 'Full' 
+                            : 'Register'
+                        }
                       </Button>
                     </div>
                   </Card>
@@ -240,9 +306,12 @@ export default function Events() {
               <h3 className="text-lg font-semibold">Register for Event</h3>
               <p className="text-sm text-muted-foreground">{selectedEvent.title}</p>
 
+              {/* Course Preference - Only for rotating dinners */}
               {selectedEvent.format === 'rotating' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Course Preference (Required)</label>
+                  <label className="text-sm font-medium">
+                    Course Preference (Required)
+                  </label>
                   <select
                     value={registrationData.coursePreference || ''}
                     onChange={(e) => setRegistrationData({
@@ -256,54 +325,64 @@ export default function Events() {
                     <option value="main">Main Course</option>
                     <option value="dessert">Dessert</option>
                   </select>
+                  <p className="text-xs text-muted-foreground">
+                    Note: Course preference is not guaranteed and will be assigned by the system
+                  </p>
                 </div>
               )}
 
+              {/* Partner Registration */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={registrationData.bringPartner}
-                    onChange={(e) => setRegistrationData({
-                      ...registrationData,
-                      bringPartner: e.target.checked
-                    })}
-                  />
-                  <span className="text-sm font-medium">
-                    {selectedEvent.format === 'rotating' ? 'Bring Partner (Required)' : 'Bring Partner (Optional)'}
-                  </span>
+                <label className="text-sm font-medium">
+                  Partner {selectedEvent.format === 'rotating' ? '(Required)' : '(Optional)'}
                 </label>
-              </div>
-
-              {registrationData.bringPartner && (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Partner Name"
-                    value={registrationData.partnerName || ''}
-                    onChange={(e) => setRegistrationData({
-                      ...registrationData,
-                      partnerName: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Partner Email"
-                    value={registrationData.partnerEmail || ''}
-                    onChange={(e) => setRegistrationData({
-                      ...registrationData,
-                      partnerEmail: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                  />
+                
+                <div className="relative">
+                  <div className="flex items-center border rounded-md">
+                    <Search className="w-4 h-4 text-muted-foreground ml-3" />
+                    <input
+                      type="text"
+                      placeholder="Search for a partner by name..."
+                      value={partnerSearch}
+                      onChange={(e) => handlePartnerSearch(e.target.value)}
+                      onFocus={() => setShowPartnerDropdown(true)}
+                      className="flex-1 px-3 py-2 outline-none"
+                    />
+                  </div>
+                  
+                  {/* Partner Dropdown */}
+                  {showPartnerDropdown && filteredUsers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredUsers.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => selectPartner(user)}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
+                        >
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-muted-foreground">@{user.username}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+                
+                {selectedEvent.format === 'hosted' && (
+                  <p className="text-xs text-muted-foreground">
+                    Optional: Bring a partner to share the experience
+                  </p>
+                )}
+              </div>
 
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsRegistrationOpen(false)}
+                  onClick={() => {
+                    setIsRegistrationOpen(false)
+                    setPartnerSearch('')
+                    setFilteredUsers([])
+                  }}
                   className="flex-1"
                 >
                   Cancel

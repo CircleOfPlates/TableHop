@@ -5,51 +5,181 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
 import type { EventItem } from './EventCard'
+import { useState } from 'react'
+import { Search } from 'lucide-react'
+
+interface User {
+  id: number
+  username: string
+  name: string
+  email: string
+}
 
 const schema = z.object({
-  partnerId: z.string().optional(),
   coursePreference: z.enum(['starter', 'main', 'dessert']).optional(),
+  isHost: z.boolean(),
+  partnerId: z.number().optional(),
 })
 
 export default function RegisterDialog({ open, onOpenChange, event }: { open: boolean; onOpenChange: (v: boolean) => void; event: EventItem }) {
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) })
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  
+  const { register, handleSubmit, reset, formState: { isSubmitting }, setValue, watch } = useForm<z.infer<typeof schema>>({ 
+    resolver: zodResolver(schema),
+    defaultValues: {
+      isHost: false,
+    }
+  })
+  
+  const handlePartnerSearch = async (searchTerm: string) => {
+    setPartnerSearch(searchTerm)
+    
+    if (!searchTerm.trim() || searchTerm.trim().length < 2) {
+      setFilteredUsers([])
+      setShowPartnerDropdown(false)
+      return
+    }
+
+    try {
+      const response = await api<User[]>(`/api/events/partners/search?q=${encodeURIComponent(searchTerm.trim())}`)
+      setFilteredUsers(response)
+      setShowPartnerDropdown(response.length > 0)
+    } catch (error) {
+      console.error('Partner search error:', error)
+      setFilteredUsers([])
+      setShowPartnerDropdown(false)
+    }
+  }
+
+  const selectPartner = (user: User) => {
+    setValue('partnerId', user.id)
+    setPartnerSearch(user.name)
+    setShowPartnerDropdown(false)
+  }
+  
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await api('/api/events/register', {
+      // Validate partner requirements for rotating dinners
+      if (event.format === 'rotating') {
+        if (!values.coursePreference) {
+          toast.error('Course preference is required for rotating dinners')
+          return
+        }
+        if (!values.partnerId) {
+          toast.error('Partner is required for rotating dinners')
+          return
+        }
+      }
+      
+      await api(`/api/events/${event.id}/join`, {
         method: 'POST',
         body: JSON.stringify({
           eventId: event.id,
-          partnerId: values.partnerId ? Number(values.partnerId) : undefined,
           coursePreference: values.coursePreference,
+          isHost: values.isHost,
+          partnerId: values.partnerId,
         })
       })
       toast.success('Registered! We will email you details.')
       onOpenChange(false)
       reset()
+      setPartnerSearch('')
+      setFilteredUsers([])
     } catch (e: any) {
       toast.error(e?.message || 'Registration failed')
     }
   })
+  
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="card p-6">
+      <Dialog.Content className="card p-6 max-w-md">
         <Dialog.Title className="text-lg font-semibold">Register for {event.title}</Dialog.Title>
-        <form onSubmit={onSubmit} className="mt-4 space-y-3">
+        <form onSubmit={onSubmit} className="mt-4 space-y-4">
+          
+          {/* Course Preference - Only for rotating dinners */}
+          {event.format === 'rotating' && (
+            <div>
+              <Label>
+                Course Preference (Required)
+              </Label>
+              <select className="input w-full" {...register('coursePreference')}>
+                <option value="">Select course preference</option>
+                <option value="starter">Starter</option>
+                <option value="main">Main</option>
+                <option value="dessert">Dessert</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: Course preference is not guaranteed and will be assigned by the system
+              </p>
+            </div>
+          )}
+          
+          {/* Partner Registration */}
           <div>
-            <Label>Partner user ID (optional)</Label>
-            <Input placeholder="Enter partner's user ID" {...register('partnerId')} />
+            <Label>
+              Partner {event.format === 'rotating' ? '(Required)' : '(Optional)'}
+            </Label>
+            
+            <div className="relative mt-2">
+              <div className="flex items-center border rounded-md">
+                <Search className="w-4 h-4 text-muted-foreground ml-3" />
+                <input
+                  type="text"
+                  placeholder="Search for a partner by name..."
+                  value={partnerSearch}
+                  onChange={(e) => handlePartnerSearch(e.target.value)}
+                  onFocus={() => setShowPartnerDropdown(true)}
+                  className="flex-1 px-3 py-2 outline-none"
+                />
+              </div>
+              
+              {/* Partner Dropdown */}
+              {showPartnerDropdown && filteredUsers.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {filteredUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => selectPartner(user)}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
+                    >
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-muted-foreground">@{user.username}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {event.format === 'hosted' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Optional: Bring a partner to share the experience
+              </p>
+            )}
           </div>
+          
+          {/* Host Registration */}
           <div>
-            <Label>Course preference</Label>
-            <select className="input" {...register('coursePreference')}>
-              <option value="">No preference</option>
-              <option value="starter">Starter</option>
-              <option value="main">Main</option>
-              <option value="dessert">Dessert</option>
-            </select>
+            <Label className="flex items-center gap-2">
+              <input type="checkbox" {...register('isHost')} />
+              <span>Register as host</span>
+            </Label>
           </div>
+          
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                onOpenChange(false)
+                setPartnerSearch('')
+                setFilteredUsers([])
+              }}
+            >
+              Cancel
+            </Button>
             <Button disabled={isSubmitting} type="submit">Confirm</Button>
           </div>
         </form>
