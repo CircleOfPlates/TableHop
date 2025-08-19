@@ -163,7 +163,7 @@ router.get('/events', requireAdmin, async (req, res) => {
       startTime: event.startTime,
       endTime: event.endTime,
       totalSpots: event.totalSpots,
-      spotsRemaining: event.spotsRemaining,
+      spotsRemaining: Math.max(0, event.totalSpots - event.participants.length),
       format: event.format,
       neighbourhood: event.neighbourhood?.name || 'Unknown', // Extract neighbourhood name
       createdAt: event.createdAt,

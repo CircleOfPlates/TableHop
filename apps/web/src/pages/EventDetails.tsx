@@ -34,7 +34,7 @@ interface EventDetails {
 }
 
 export default function EventDetails() {
-  const [location, setLocation] = useLocation()
+  const [, setLocation] = useLocation()
   const queryClient = useQueryClient()
   const [isOptingOut, setIsOptingOut] = useState(false)
   

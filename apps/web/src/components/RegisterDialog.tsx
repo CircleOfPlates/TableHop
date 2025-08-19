@@ -1,4 +1,4 @@
-import { Dialog, Button, Label, Input } from './ui'
+import { Dialog, Button, Label } from './ui'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,7 +26,7 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   
-  const { register, handleSubmit, reset, formState: { isSubmitting }, setValue, watch } = useForm<z.infer<typeof schema>>({ 
+  const { register, handleSubmit, reset, formState: { isSubmitting }, setValue } = useForm<z.infer<typeof schema>>({ 
     resolver: zodResolver(schema),
     defaultValues: {
       isHost: false,
