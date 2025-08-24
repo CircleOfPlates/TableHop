@@ -8,10 +8,11 @@ import { Target, TrendingUp, Award, Zap, Crown } from 'lucide-react'
 
 interface Badge {
   id: string
-  name: string
-  description: string
-  icon: string
-  category: string
+  name?: string
+  badgeType?: string
+  description?: string
+  icon?: string
+  category?: string
   earned: boolean
   progress: number
   current: number
@@ -39,10 +40,10 @@ interface LeaderboardEntry {
   userId: number
   points: number
   totalPointsEarned: number
-  user: {
+  user?: {
     id: number
-    name: string
-    username: string
+    name?: string
+    username?: string
   }
 }
 
@@ -80,13 +81,13 @@ export default function Rewards() {
     },
   })
 
-  const earnedBadges = badges?.filter(b => b.earned) || []
-  const inProgressBadges = badges?.filter(b => !b.earned && b.progress > 0) || []
-  const lockedBadges = badges?.filter(b => !b.earned && b.progress === 0) || []
+  const earnedBadges = badges?.filter(b => b.earned && (b.name || b.badgeType)) || []
+  const inProgressBadges = badges?.filter(b => !b.earned && b.progress > 0 && (b.name || b.badgeType)) || []
+  const lockedBadges = badges?.filter(b => !b.earned && b.progress === 0 && (b.name || b.badgeType)) || []
 
 
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category?: string) => {
     switch (category) {
       case 'hosting': return 'text-orange-600 bg-orange-100'
       case 'community': return 'text-blue-600 bg-blue-100'
@@ -97,10 +98,10 @@ export default function Rewards() {
 
   return (
     <AuthGuard>
-      <div className="container py-10 space-y-8">
+      <div className="container py-6 sm:py-10 space-y-6 sm:space-y-8 px-4 sm:px-6">
         <div>
-          <h1 className="text-3xl font-bold">Rewards & Achievements</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Rewards & Achievements</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
             Track your progress, earn badges, and compete on the leaderboard
           </p>
         </div>
@@ -147,7 +148,7 @@ export default function Rewards() {
         </Card>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+        <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-lg">
           {[
             { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-4 h-4" /> },
             { id: 'badges', label: 'Badges', icon: <Award className="w-4 h-4" /> },
@@ -157,14 +158,14 @@ export default function Rewards() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none min-w-0 ${
                 activeTab === tab.id
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="truncate">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -189,13 +190,13 @@ export default function Rewards() {
                   <div className="space-y-3">
                     {earnedBadges.slice(0, 3).map((badge) => (
                       <div key={badge.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <div className="text-2xl">{badge.icon}</div>
+                        <div className="text-2xl">{badge.icon || '🏆'}</div>
                         <div className="flex-1">
-                          <div className="font-medium">{badge.name}</div>
-                          <div className="text-sm text-muted-foreground">{badge.description}</div>
+                          <div className="font-medium">{badge.name || badge.badgeType?.replace(/_/g, ' ') || 'Unknown Badge'}</div>
+                          <div className="text-sm text-muted-foreground">{badge.description || 'No description available'}</div>
                         </div>
                         <Badge className={getCategoryColor(badge.category)}>
-                          {badge.category}
+                          {badge.category || 'general'}
                         </Badge>
                       </div>
                     ))}
@@ -225,7 +226,7 @@ export default function Rewards() {
                   </div>
                 ) : leaderboard && leaderboard.length > 0 ? (
                   <div className="space-y-3">
-                    {leaderboard.slice(0, 5).map((entry, index) => (
+                    {leaderboard.filter(entry => entry && entry.userId).slice(0, 5).map((entry, index) => (
                       <div key={entry.userId} className="flex items-center gap-3 p-2">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                           index === 0 ? 'bg-yellow-100 text-yellow-800' :
@@ -236,9 +237,9 @@ export default function Rewards() {
                           {index + 1}
                         </div>
                         <div className="flex-1">
-                          <div className="font-medium">{entry.user.name || entry.user.username}</div>
+                          <div className="font-medium">{entry.user?.name || entry.user?.username || 'Unknown User'}</div>
                         </div>
-                        <div className="text-sm font-medium">{entry.points} pts</div>
+                        <div className="text-sm font-medium">{entry.points || 0} pts</div>
                       </div>
                     ))}
                   </div>
@@ -263,9 +264,9 @@ export default function Rewards() {
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {earnedBadges.map((badge) => (
                       <div key={badge.id} className="p-4 border-2 border-green-200 bg-green-50 rounded-lg">
-                        <div className="text-3xl mb-2">{badge.icon}</div>
-                        <div className="font-semibold">{badge.name}</div>
-                        <div className="text-sm text-muted-foreground mb-2">{badge.description}</div>
+                        <div className="text-3xl mb-2">{badge.icon || '🏆'}</div>
+                        <div className="font-semibold">{badge.name || badge.badgeType?.replace(/_/g, ' ') || 'Unknown Badge'}</div>
+                        <div className="text-sm text-muted-foreground mb-2">{badge.description || 'No description available'}</div>
                         <Badge className="bg-green-100 text-green-800">
                           Earned
                         </Badge>
@@ -284,18 +285,18 @@ export default function Rewards() {
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {inProgressBadges.map((badge) => (
                       <div key={badge.id} className="p-4 border-2 border-blue-200 bg-blue-50 rounded-lg">
-                        <div className="text-3xl mb-2">{badge.icon}</div>
-                        <div className="font-semibold">{badge.name}</div>
-                        <div className="text-sm text-muted-foreground mb-2">{badge.description}</div>
+                        <div className="text-3xl mb-2">{badge.icon || '🎯'}</div>
+                        <div className="font-semibold">{badge.name || badge.badgeType?.replace(/_/g, ' ') || 'Unknown Badge'}</div>
+                        <div className="text-sm text-muted-foreground mb-2">{badge.description || 'No description available'}</div>
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Progress</span>
-                            <span>{badge.current}/{badge.required}</span>
+                            <span>{badge.current || 0}/{badge.required || 1}</span>
                           </div>
                           <Progress.Root className="h-2 bg-blue-200 rounded-full">
                             <Progress.Indicator 
                               className="h-2 bg-blue-600 rounded-full transition-all"
-                              style={{ width: `${badge.progress}%` }}
+                              style={{ width: `${badge.progress || 0}%` }}
                             />
                           </Progress.Root>
                         </div>
@@ -313,11 +314,11 @@ export default function Rewards() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lockedBadges.map((badge) => (
                     <div key={badge.id} className="p-4 border-2 border-gray-200 bg-gray-50 rounded-lg opacity-60">
-                      <div className="text-3xl mb-2">{badge.icon}</div>
-                      <div className="font-semibold">{badge.name}</div>
-                      <div className="text-sm text-muted-foreground mb-2">{badge.description}</div>
+                      <div className="text-3xl mb-2">{badge.icon || '🔒'}</div>
+                      <div className="font-semibold">{badge.name || badge.badgeType?.replace(/_/g, ' ') || 'Unknown Badge'}</div>
+                      <div className="text-sm text-muted-foreground mb-2">{badge.description || 'No description available'}</div>
                       <div className="text-xs text-muted-foreground">
-                        Requires: {badge.required} events
+                        Requires: {badge.required || 1} events
                       </div>
                     </div>
                   ))}
@@ -342,7 +343,7 @@ export default function Rewards() {
                 </div>
               ) : leaderboard && leaderboard.length > 0 ? (
                 <div className="space-y-3">
-                  {leaderboard.map((entry, index) => (
+                  {leaderboard.filter(entry => entry && entry.userId).map((entry, index) => (
                     <div key={entry.userId} className="flex items-center gap-4 p-4 border rounded-lg">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                         index === 0 ? 'bg-yellow-100 text-yellow-800' :
@@ -353,13 +354,13 @@ export default function Rewards() {
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">{entry.user.name || entry.user.username}</div>
+                        <div className="font-medium">{entry.user?.name || entry.user?.username || 'Unknown User'}</div>
                         <div className="text-sm text-muted-foreground">
-                          Total earned: {entry.totalPointsEarned} points
+                          Total earned: {entry.totalPointsEarned || 0} points
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">{entry.points}</div>
+                        <div className="font-bold text-lg">{entry.points || 0}</div>
                         <div className="text-sm text-muted-foreground">points</div>
                       </div>
                     </div>

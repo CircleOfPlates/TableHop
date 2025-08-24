@@ -94,8 +94,8 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
   
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="card p-6 max-w-md">
-        <Dialog.Title className="text-lg font-semibold">Register for {event.title}</Dialog.Title>
+      <Dialog.Content className="card p-4 sm:p-6 max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <Dialog.Title className="text-lg font-semibold break-words">Register for {event.title}</Dialog.Title>
         <form onSubmit={onSubmit} className="mt-4 space-y-4">
           
           {/* Course Preference - Only for rotating dinners */}
@@ -124,14 +124,14 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
             
             <div className="relative mt-2">
               <div className="flex items-center border rounded-md">
-                <Search className="w-4 h-4 text-muted-foreground ml-3" />
+                <Search className="w-4 h-4 text-muted-foreground ml-3 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search for a partner by name..."
                   value={partnerSearch}
                   onChange={(e) => handlePartnerSearch(e.target.value)}
                   onFocus={() => setShowPartnerDropdown(true)}
-                  className="flex-1 px-3 py-2 outline-none"
+                  className="flex-1 px-3 py-2 outline-none min-w-0"
                 />
               </div>
               
@@ -145,8 +145,8 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
                       onClick={() => selectPartner(user)}
                       className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
                     >
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">@{user.username}</div>
+                      <div className="font-medium truncate">{user.name}</div>
+                      <div className="text-sm text-muted-foreground truncate">@{user.username}</div>
                     </button>
                   ))}
                 </div>
@@ -168,7 +168,7 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
             </Label>
           </div>
           
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <Button 
               type="button" 
               variant="outline" 
@@ -177,10 +177,11 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
                 setPartnerSearch('')
                 setFilteredUsers([])
               }}
+              className="flex-1 sm:flex-none"
             >
               Cancel
             </Button>
-            <Button disabled={isSubmitting} type="submit">Confirm</Button>
+            <Button disabled={isSubmitting} type="submit" className="flex-1 sm:flex-none">Confirm</Button>
           </div>
         </form>
       </Dialog.Content>

@@ -247,42 +247,42 @@ export default function Events() {
               {events?.map((event) => {
                 const status = getEventStatus(event)
                 return (
-                  <Card key={event.id} className="p-6 space-y-4">
+                  <Card key={event.id} className="p-4 sm:p-6 space-y-4">
                     <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <h3 className="font-semibold text-lg">{event.title}</h3>
-                        <Badge className={status.color}>{status.text}</Badge>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <h3 className="font-semibold text-base sm:text-lg break-words">{event.title}</h3>
+                        <Badge className={`${status.color} shrink-0`}>{status.text}</Badge>
                       </div>
-                      <p className="text-muted-foreground text-sm">{event.description}</p>
+                      <p className="text-muted-foreground text-sm line-clamp-2">{event.description}</p>
                     </div>
 
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span>{formatEventDate(event.date)}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{formatEventDate(event.date)}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span>{formatEventTime(event.startTime, event.endTime)}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{formatEventTime(event.startTime, event.endTime)}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span>{event.neighbourhood}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{event.neighbourhood}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span>{event.spotsRemaining} of {event.totalSpots} spots available</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{event.spotsRemaining} of {event.totalSpots} spots available</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="capitalize">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <Badge variant="outline" className="capitalize shrink-0 self-start">
                         {event.format} format
                       </Badge>
                       <Button
                         onClick={() => handleRegister(event)}
                         disabled={event.spotsRemaining === 0 && !event.isWaitlist || userParticipatingEventIds.has(event.id)}
-                        className="w-full"
+                        className="w-full sm:w-auto"
                       >
                         {userParticipatingEventIds.has(event.id) 
                           ? 'Already Registered' 
@@ -302,98 +302,100 @@ export default function Events() {
         {/* Registration Modal */}
         {isRegistrationOpen && selectedEvent && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md p-6 space-y-4">
-              <h3 className="text-lg font-semibold">Register for Event</h3>
-              <p className="text-sm text-muted-foreground">{selectedEvent.title}</p>
+            <Card className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 space-y-4">
+                <h3 className="text-lg font-semibold">Register for Event</h3>
+                <p className="text-sm text-muted-foreground break-words">{selectedEvent.title}</p>
 
-              {/* Course Preference - Only for rotating dinners */}
-              {selectedEvent.format === 'rotating' && (
+                {/* Course Preference - Only for rotating dinners */}
+                {selectedEvent.format === 'rotating' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Course Preference (Required)
+                    </label>
+                    <select
+                      value={registrationData.coursePreference || ''}
+                      onChange={(e) => setRegistrationData({
+                        ...registrationData,
+                        coursePreference: e.target.value as 'starter' | 'main' | 'dessert'
+                      })}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="">Select course preference</option>
+                      <option value="starter">Starter (Appetizers)</option>
+                      <option value="main">Main Course</option>
+                      <option value="dessert">Dessert</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Note: Course preference is not guaranteed and will be assigned by the system
+                    </p>
+                  </div>
+                )}
+
+                {/* Partner Registration */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Course Preference (Required)
+                    Partner {selectedEvent.format === 'rotating' ? '(Required)' : '(Optional)'}
                   </label>
-                  <select
-                    value={registrationData.coursePreference || ''}
-                    onChange={(e) => setRegistrationData({
-                      ...registrationData,
-                      coursePreference: e.target.value as 'starter' | 'main' | 'dessert'
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                  >
-                    <option value="">Select course preference</option>
-                    <option value="starter">Starter (Appetizers)</option>
-                    <option value="main">Main Course</option>
-                    <option value="dessert">Dessert</option>
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    Note: Course preference is not guaranteed and will be assigned by the system
-                  </p>
-                </div>
-              )}
-
-              {/* Partner Registration */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Partner {selectedEvent.format === 'rotating' ? '(Required)' : '(Optional)'}
-                </label>
-                
-                <div className="relative">
-                  <div className="flex items-center border rounded-md">
-                    <Search className="w-4 h-4 text-muted-foreground ml-3" />
-                    <input
-                      type="text"
-                      placeholder="Search for a partner by name..."
-                      value={partnerSearch}
-                      onChange={(e) => handlePartnerSearch(e.target.value)}
-                      onFocus={() => setShowPartnerDropdown(true)}
-                      className="flex-1 px-3 py-2 outline-none"
-                    />
+                  
+                  <div className="relative">
+                    <div className="flex items-center border rounded-md">
+                      <Search className="w-4 h-4 text-muted-foreground ml-3 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Search for a partner by name..."
+                        value={partnerSearch}
+                        onChange={(e) => handlePartnerSearch(e.target.value)}
+                        onFocus={() => setShowPartnerDropdown(true)}
+                        className="flex-1 px-3 py-2 outline-none min-w-0"
+                      />
+                    </div>
+                    
+                    {/* Partner Dropdown */}
+                    {showPartnerDropdown && filteredUsers.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {filteredUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => selectPartner(user)}
+                            className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
+                          >
+                            <div className="font-medium truncate">{user.name}</div>
+                            <div className="text-sm text-muted-foreground truncate">@{user.username}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Partner Dropdown */}
-                  {showPartnerDropdown && filteredUsers.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {filteredUsers.map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => selectPartner(user)}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
-                        >
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">@{user.username}</div>
-                        </button>
-                      ))}
-                    </div>
+                  {selectedEvent.format === 'hosted' && (
+                    <p className="text-xs text-muted-foreground">
+                      Optional: Bring a partner to share the experience
+                    </p>
                   )}
                 </div>
-                
-                {selectedEvent.format === 'hosted' && (
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Bring a partner to share the experience
-                  </p>
-                )}
-              </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsRegistrationOpen(false)
-                    setPartnerSearch('')
-                    setFilteredUsers([])
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmitRegistration}
-                  disabled={registerMutation.isPending}
-                  className="flex-1"
-                >
-                  {registerMutation.isPending ? 'Registering...' : 'Register'}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsRegistrationOpen(false)
+                      setPartnerSearch('')
+                      setFilteredUsers([])
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSubmitRegistration}
+                    disabled={registerMutation.isPending}
+                    className="flex-1"
+                  >
+                    {registerMutation.isPending ? 'Registering...' : 'Register'}
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>

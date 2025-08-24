@@ -136,17 +136,17 @@ export default function EventDetails() {
     <AuthGuard>
       <div className="container py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <Button 
             variant="outline" 
             onClick={() => setLocation('/dashboard')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{event.title}</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold break-words">{event.title}</h1>
             <p className="text-muted-foreground">Event Details</p>
           </div>
         </div>
@@ -154,43 +154,43 @@ export default function EventDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Event Info */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-xl font-semibold">Event Information</h2>
-                <Badge variant={event.format === 'rotating' ? 'default' : 'outline'}>
+            <Card className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-2">
+                <h2 className="text-lg sm:text-xl font-semibold">Event Information</h2>
+                <Badge variant={event.format === 'rotating' ? 'default' : 'outline'} className="shrink-0">
                   {event.format === 'rotating' ? 'Rotating Dinner' : 'Hosted Dinner'}
                 </Badge>
               </div>
               
               <div className="space-y-4">
-                <p className="text-muted-foreground">{event.description}</p>
+                <p className="text-muted-foreground break-words">{event.description}</p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>{new Date(event.date).toLocaleDateString()}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{new Date(event.date).toLocaleDateString()}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span>{event.startTime} - {event.endTime}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{event.startTime} - {event.endTime}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span>{event.neighbourhood}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{event.neighbourhood}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span>{participantCount} participants</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{participantCount} participants</span>
                   </div>
                 </div>
 
                 {participation?.coursePreference && (
-                  <div className="flex items-center gap-2">
-                    <ChefHat className="w-4 h-4 text-muted-foreground" />
-                    <span>Course Preference: <Badge variant="outline">{participation.coursePreference}</Badge></span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ChefHat className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">Course Preference: <Badge variant="outline">{participation.coursePreference}</Badge></span>
                   </div>
                 )}
               </div>
@@ -198,26 +198,26 @@ export default function EventDetails() {
 
             {/* Your Participation */}
             {participation && (
-              <Card className="p-6">
+              <Card className="p-4 sm:p-6">
                 <h3 className="text-lg font-semibold mb-4">Your Participation</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-green-600" />
-                    <span>Registered on {new Date(participation.registeredAt).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="truncate">Registered on {new Date(participation.registeredAt).toLocaleDateString()}</span>
                   </div>
                   
                   {participation.isHost && (
-                    <div className="flex items-center gap-2">
-                      <ChefHat className="w-4 h-4 text-orange-600" />
-                      <span>You are hosting this event</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ChefHat className="w-4 h-4 text-orange-600 shrink-0" />
+                      <span className="truncate">You are hosting this event</span>
                     </div>
                   )}
 
                   {participation.partnerName && (
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-blue-600" />
-                      <span>Partner: {participation.partnerName}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="truncate">Partner: {participation.partnerName}</span>
                     </div>
                   )}
                 </div>
@@ -228,33 +228,33 @@ export default function EventDetails() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Status Card */}
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <h3 className="text-lg font-semibold mb-4">Event Status</h3>
               
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span>Status:</span>
-                  <Badge variant={isUpcoming ? 'default' : 'outline'}>
+                  <Badge variant={isUpcoming ? 'default' : 'outline'} className="shrink-0">
                     {isUpcoming ? 'Upcoming' : 'Past'}
                   </Badge>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <span>Format:</span>
-                  <span className="capitalize">{event.format}</span>
+                  <span className="capitalize truncate">{event.format}</span>
                 </div>
                 
                 {participation && (
                   <div className="flex items-center justify-between">
                     <span>Role:</span>
-                    <span>{participation.isHost ? 'Host' : 'Guest'}</span>
+                    <span className="truncate">{participation.isHost ? 'Host' : 'Guest'}</span>
                   </div>
                 )}
               </div>
             </Card>
 
             {/* Actions Card */}
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
               
               <div className="space-y-3">
@@ -289,8 +289,8 @@ export default function EventDetails() {
             {isUpcoming && participation && (
               <Card className="p-4 border-amber-200 bg-amber-50">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
-                  <div className="text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-800 min-w-0">
                     <p className="font-medium mb-1">Opting out will:</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Remove you from this event</li>

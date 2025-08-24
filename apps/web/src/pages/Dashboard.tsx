@@ -43,7 +43,7 @@ export default function Dashboard() {
     toast.success('Welcome to TableHop! Your profile is complete.')
   }
 
-  const earnedBadges = badges?.filter(b => b.earned) || []
+  const earnedBadges = badges?.filter(b => b.earned && b.badgeType) || []
   const recentBadges = earnedBadges.slice(0, 3)
   const upcomingEvents = userEvents?.filter((event: any) => new Date(event.date) > new Date()) || []
   const nextEvent = upcomingEvents[0]
@@ -62,68 +62,68 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="card p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/events')}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="card p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/events')}>
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-blue-200 transition-colors">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-blue-200 transition-colors">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
-              <h3 className="font-medium text-sm">Browse Events</h3>
+              <h3 className="font-medium text-xs sm:text-sm">Browse Events</h3>
             </div>
           </div>
 
-          <div className="card p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/rewards')}>
+          <div className="card p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/rewards')}>
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-green-200 transition-colors">
-                <Award className="w-6 h-6 text-green-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-green-200 transition-colors">
+                <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
-              <h3 className="font-medium text-sm">Rewards</h3>
+              <h3 className="font-medium text-xs sm:text-sm">Rewards</h3>
             </div>
           </div>
 
-          <div className="card p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/profile')}>
+          <div className="card p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/profile')}>
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-purple-200 transition-colors">
-                <Users className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-purple-200 transition-colors">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
-              <h3 className="font-medium text-sm">Profile</h3>
+              <h3 className="font-medium text-xs sm:text-sm">Profile</h3>
             </div>
           </div>
 
-          <div className="card p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/events')}>
+          <div className="card p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer group" onClick={() => setLocation('/events')}>
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-orange-200 transition-colors">
-                <Plus className="w-6 h-6 text-orange-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-orange-200 transition-colors">
+                <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
               </div>
-              <h3 className="font-medium text-sm">Host Event</h3>
+              <h3 className="font-medium text-xs sm:text-sm">Host Event</h3>
             </div>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Points Card */}
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <h3 className="font-semibold text-green-800">Points Balance</h3>
+                <h3 className="font-semibold text-green-800 text-sm sm:text-base">Points Balance</h3>
               </div>
               <Button 
                 variant="outline" 
                 onClick={() => setLocation('/rewards')}
-                className="text-green-600 hover:text-green-700 border-green-300"
+                className="text-green-600 hover:text-green-700 border-green-300 p-2 sm:p-2"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             <div className="space-y-3">
-              <div className="text-3xl font-bold text-green-700">
+              <div className="text-2xl sm:text-3xl font-bold text-green-700">
                 {pointsLoading ? '...' : pointsData?.currentPoints || 0}
               </div>
-              <div className="text-sm text-green-600">
+              <div className="text-xs sm:text-sm text-green-600">
                 Total earned: {pointsData?.totalPointsEarned || 0}
               </div>
               <div className="h-2 rounded-full bg-green-200">
@@ -138,99 +138,68 @@ export default function Dashboard() {
           </Card>
 
           {/* Badges Card */}
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-purple-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 </div>
-                <h3 className="font-semibold text-purple-800">Badges Earned</h3>
+                <h3 className="font-semibold text-purple-800 text-sm sm:text-base">Badges Earned</h3>
               </div>
               <Button 
                 variant="outline" 
                 onClick={() => setLocation('/rewards')}
-                className="text-purple-600 hover:text-purple-700 border-purple-300"
+                className="text-purple-600 hover:text-purple-700 border-purple-300 p-2 sm:p-2"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             <div className="space-y-3">
-              <div className="text-3xl font-bold text-purple-700">
+              <div className="text-2xl sm:text-3xl font-bold text-purple-700">
                 {badgesLoading ? '...' : earnedBadges.length}
               </div>
-              <div className="text-sm text-purple-600">
-                {badges?.length || 0} total available
+              <div className="text-xs sm:text-sm text-purple-600">
+                {recentBadges.length > 0 ? 'Recent badges:' : 'No badges yet'}
               </div>
-              <div className="flex gap-2">
-                {badgesLoading ? (
-                  <>
-                    <div className="h-8 w-8 bg-purple-200 rounded animate-pulse" />
-                    <div className="h-8 w-8 bg-purple-200 rounded animate-pulse" />
-                  </>
-                ) : recentBadges.map((badge) => (
-                  <div key={badge.id} className="h-8 w-8 bg-purple-100 rounded flex items-center justify-center text-lg hover:scale-110 transition-transform">
-                    {badge.icon}
-                  </div>
-                ))}
-                {earnedBadges.length > 3 && (
-                  <div className="h-8 w-8 bg-purple-100 rounded flex items-center justify-center text-xs font-medium text-purple-600">
-                    +{earnedBadges.length - 3}
-                  </div>
-                )}
-              </div>
+              {recentBadges.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {recentBadges.map((badge, index) => (
+                    <Badge key={index} className="text-xs bg-purple-100 text-purple-800">
+                      {(badge.badgeType || 'Unknown Badge').replace(/_/g, ' ')}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
 
-          {/* Next Event Card */}
-          <Card className="p-6 bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+          {/* Events Card */}
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-orange-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <h3 className="font-semibold text-orange-800">Next Event</h3>
+                <h3 className="font-semibold text-blue-800 text-sm sm:text-base">Upcoming Events</h3>
               </div>
               <Button 
                 variant="outline" 
-                onClick={() => setLocation('/events')}
-                className="text-orange-600 hover:text-orange-700 border-orange-300"
+                onClick={() => setLocation('/dashboard')}
+                className="text-blue-600 hover:text-blue-700 border-blue-300 p-2 sm:p-2"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             <div className="space-y-3">
-              {nextEvent ? (
-                <>
-                  <div className="font-semibold text-orange-800 truncate">
-                    {nextEvent.title}
-                  </div>
-                  <div className="text-sm text-orange-600 space-y-1">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {new Date(nextEvent.date).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {nextEvent.neighbourhood}
-                    </div>
-                  </div>
-                  {nextEvent.courseAssigned && (
-                    <Badge variant="outline" className="text-orange-600 border-orange-300">
-                      <ChefHat className="w-3 h-3 mr-1" />
-                      Hosting: {nextEvent.courseAssigned}
-                    </Badge>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <div className="text-2xl mb-2">🎉</div>
-                  <div className="text-sm text-orange-600">No upcoming events</div>
-                  <Button 
-                    className="mt-2 bg-orange-600 hover:bg-orange-700"
-                    onClick={() => setLocation('/events')}
-                  >
-                    Find Events
-                  </Button>
+              <div className="text-2xl sm:text-3xl font-bold text-blue-700">
+                {eventsLoading ? '...' : upcomingEvents.length}
+              </div>
+              <div className="text-xs sm:text-sm text-blue-600">
+                {nextEvent ? `Next: ${nextEvent.title || 'Untitled Event'}` : 'No upcoming events'}
+              </div>
+              {nextEvent && (
+                <div className="text-xs text-blue-600">
+                  {new Date(nextEvent.date).toLocaleDateString()}
                 </div>
               )}
             </div>
@@ -238,15 +207,15 @@ export default function Dashboard() {
         </div>
 
         {/* My Events Section */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <Activity className="w-4 h-4 text-blue-600" />
               </div>
-              <h2 className="text-xl font-semibold">My Events</h2>
+              <h2 className="text-lg sm:text-xl font-semibold">My Events</h2>
             </div>
-            <Button onClick={() => setLocation('/events')} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => setLocation('/events')} className="bg-blue-600 hover:bg-blue-700 self-start sm:self-auto">
               Browse All Events
             </Button>
           </div>
@@ -260,36 +229,38 @@ export default function Dashboard() {
           ) : userEvents && userEvents.length > 0 ? (
             <div className="space-y-4">
               {userEvents.slice(0, 3).map((event: any) => (
-                <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-medium">{event.title}</h4>
-                      <Badge variant="outline" className="capitalize">
-                        {event.format} format
-                      </Badge>
-                      {event.courseAssigned && (
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                          <ChefHat className="w-3 h-3 mr-1" />
-                          {event.courseAssigned}
+                <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:shadow-md transition-shadow gap-4">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <h4 className="font-medium break-words">{event.title}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="capitalize shrink-0">
+                          {event.format} format
                         </Badge>
-                      )}
+                        {event.courseAssigned && (
+                          <Badge className="bg-green-100 text-green-800 border-green-200 shrink-0">
+                            <ChefHat className="w-3 h-3 mr-1" />
+                            {event.courseAssigned}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(event.date).toLocaleDateString()}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Calendar className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{new Date(event.date).toLocaleDateString()}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {event.startTime} - {event.endTime}
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{event.startTime} - {event.endTime}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {event.neighbourhood}
+                      <div className="flex items-center gap-1 min-w-0">
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{event.neighbourhood}</span>
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" onClick={() => setLocation(`/event/${event.id}`)}>
+                  <Button variant="outline" onClick={() => setLocation(`/event/${event.id}`)} className="self-start sm:self-auto">
                     View Details
                   </Button>
                 </div>
@@ -304,7 +275,7 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="text-center py-12">
+            <div className="text-center py-8 sm:py-12">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Calendar className="w-8 h-8 text-blue-600" />
               </div>
@@ -318,15 +289,15 @@ export default function Dashboard() {
         </Card>
 
         {/* Profile Completion */}
-        <Card className="p-6 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="p-4 sm:p-6 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                 <Target className="w-4 h-4 text-amber-600" />
               </div>
-              <h2 className="text-xl font-semibold text-amber-800">Profile Completion</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-amber-800">Profile Completion</h2>
             </div>
-            <div className="text-sm text-amber-600">67% Complete</div>
+            <div className="text-sm text-amber-600 self-start sm:self-auto">67% Complete</div>
           </div>
           <p className="text-amber-700 mb-4">Complete your profile to improve matching and unlock more features.</p>
           <Progress.Root className="relative h-3 w-full overflow-hidden rounded-full bg-amber-200 mb-4">

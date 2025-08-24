@@ -52,19 +52,19 @@ export default function AdminAdmins() {
 
   return (
     <AdminGuard>
-      <div className="container py-10 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="container py-6 sm:py-10 space-y-6 px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Admin User Management</h1>
-          <p className="text-muted-foreground mt-2">Create and manage admin accounts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Admin User Management</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Create and manage admin accounts</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
           Create Admin User
         </Button>
       </div>
 
       <Card>
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
@@ -73,7 +73,8 @@ export default function AdminAdmins() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-5 gap-4 font-medium text-sm text-muted-foreground">
+              {/* Desktop Table Headers - Hidden on Mobile */}
+              <div className="hidden lg:grid grid-cols-5 gap-4 font-medium text-sm text-muted-foreground">
                 <div>Name</div>
                 <div>Username</div>
                 <div>Email</div>
@@ -82,15 +83,44 @@ export default function AdminAdmins() {
               </div>
 
               {admins?.users?.map((admin) => (
-                <div key={admin.id} className="grid grid-cols-5 gap-4 items-center py-3 border-b last:border-b-0">
-                  <div className="font-medium">{admin.name}</div>
-                  <div className="text-sm">{admin.username}</div>
-                  <div className="text-sm">{admin.email}</div>
-                  <div className="text-sm">{new Date(admin.createdAt).toLocaleDateString()}</div>
-                  <div>
-                    <Button variant="outline" disabled>
-                      Admin
-                    </Button>
+                <div key={admin.id}>
+                  {/* Desktop Layout */}
+                  <div className="hidden lg:grid grid-cols-5 gap-4 items-center py-3 border-b last:border-b-0">
+                    <div className="font-medium">{admin.name}</div>
+                    <div className="text-sm">{admin.username}</div>
+                    <div className="text-sm">{admin.email}</div>
+                    <div className="text-sm">{new Date(admin.createdAt).toLocaleDateString()}</div>
+                    <div>
+                      <Button variant="outline"  disabled>
+                        Admin
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Mobile Card Layout */}
+                  <div className="lg:hidden border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-base truncate">{admin.name}</div>
+                        <div className="text-sm text-muted-foreground truncate">{admin.email}</div>
+                      </div>
+                      <div className="ml-2 shrink-0">
+                        <Button variant="outline"  disabled>
+                          Admin
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Username:</span>
+                        <div className="font-medium truncate">{admin.username}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Created:</span>
+                        <div className="font-medium">{new Date(admin.createdAt).toLocaleDateString()}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -106,9 +136,9 @@ export default function AdminAdmins() {
       </Card>
 
       <Dialog.Root open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <Dialog.Content>
-                            <Dialog.Title>Create New Admin User</Dialog.Title>
-                  <Dialog.Description>Create a new admin account with full platform access.</Dialog.Description>
+        <Dialog.Content className="max-h-[90vh] overflow-y-auto mx-4 max-w-lg">
+          <Dialog.Title>Create New Admin User</Dialog.Title>
+          <Dialog.Description>Create a new admin account with full platform access.</Dialog.Description>
           <CreateAdminForm onSubmit={createAdminMutation.mutate} isLoading={createAdminMutation.isPending} />
         </Dialog.Content>
       </Dialog.Root>
@@ -167,11 +197,11 @@ function CreateAdminForm({ onSubmit, isLoading }: { onSubmit: (data: z.infer<typ
         </ul>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => form.reset()}>
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">
           Reset
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? 'Creating...' : 'Create Admin User'}
         </Button>
       </div>

@@ -18,6 +18,8 @@ import AdminUsers from './pages/admin/Users'
 import AdminEvents from './pages/admin/Events'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminAdmins from './pages/admin/Admins'
+import AdminUserDetail from './pages/admin/UserDetail'
+import AdminEventDetail from './pages/admin/EventDetail'
 import AuthTest from './pages/AuthTest'
 import Health from './pages/Health'
 import AppToaster from './components/Toaster'
@@ -46,7 +48,9 @@ function App() {
               <Route path="/profile" component={Profile} />
               <Route path="/admin" component={Admin} />
               <Route path="/admin/users" component={AdminUsers} />
+              <Route path="/admin/users/:id" component={AdminUserDetail} />
               <Route path="/admin/events" component={AdminEvents} />
+              <Route path="/admin/events/:id" component={AdminEventDetail} />
               <Route path="/admin/analytics" component={AdminAnalytics} />
               <Route path="/admin/admins" component={AdminAdmins} />
               <Route path="/auth-test" component={AuthTest} />

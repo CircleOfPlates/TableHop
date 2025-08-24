@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { toast } from 'sonner'
 import AdminGuard from '../../components/AdminGuard'
+import { useLocation } from 'wouter'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -42,6 +43,7 @@ const eventSchema = z.object({
 })
 
 export default function AdminEvents() {
+  const [, setLocation] = useLocation()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [page, setPage] = useState(1)
   const queryClient = useQueryClient()
@@ -93,19 +95,19 @@ export default function AdminEvents() {
 
   return (
     <AdminGuard>
-      <div className="container py-10 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="container py-6 sm:py-10 space-y-6 px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Event Management</h1>
-          <p className="text-muted-foreground mt-2">Create and manage dinner events</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Event Management</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Create and manage dinner events</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
           Create Event
         </Button>
       </div>
 
       <Card>
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
@@ -114,7 +116,8 @@ export default function AdminEvents() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-7 gap-4 font-medium text-sm text-muted-foreground">
+              {/* Desktop Table Headers - Hidden on Mobile */}
+              <div className="hidden lg:grid grid-cols-7 gap-4 font-medium text-sm text-muted-foreground">
                 <div>Title</div>
                 <div>Date</div>
                 <div>Time</div>
@@ -125,20 +128,60 @@ export default function AdminEvents() {
               </div>
 
               {data?.events?.map((event) => (
-                <div key={event.id} className="grid grid-cols-7 gap-4 items-center py-3 border-b last:border-b-0">
-                  <div className="font-medium">{event.title}</div>
-                  <div className="text-sm">{new Date(event.date).toLocaleDateString()}</div>
-                  <div className="text-sm">{event.startTime} - {event.endTime}</div>
-                  <div className="text-sm">{event.spotsRemaining}/{event.totalSpots}</div>
-                  <div className="text-sm capitalize">{event.format}</div>
-                  <div className="text-sm">{event.neighbourhood}</div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => window.open(`/admin/events/${event.id}`, '_blank')}>
-                      Edit
-                    </Button>
-                    <Button variant="outline" onClick={() => handleDeleteEvent(event.id)}>
-                      Delete
-                    </Button>
+                <div key={event.id}>
+                  {/* Desktop Layout */}
+                  <div className="hidden lg:grid grid-cols-7 gap-4 items-center py-3 border-b last:border-b-0">
+                    <div className="font-medium">{event.title}</div>
+                    <div className="text-sm">{new Date(event.date).toLocaleDateString()}</div>
+                    <div className="text-sm">{event.startTime} - {event.endTime}</div>
+                    <div className="text-sm">{event.spotsRemaining}/{event.totalSpots}</div>
+                    <div className="text-sm capitalize">{event.format}</div>
+                    <div className="text-sm">{event.neighbourhood}</div>
+                    <div className="flex gap-2">
+                      <Button variant="outline"  onClick={() => setLocation(`/admin/events/${event.id}`)}>
+                        Edit
+                      </Button>
+                      <Button variant="outline"  onClick={() => handleDeleteEvent(event.id)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Mobile Card Layout */}
+                  <div className="lg:hidden border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-base truncate">{event.title}</div>
+                        <div className="text-sm text-muted-foreground">{new Date(event.date).toLocaleDateString()}</div>
+                      </div>
+                      <div className="ml-2 shrink-0">
+                        <span className="text-xs px-2 py-1 bg-muted rounded capitalize">{event.format}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Time:</span>
+                        <div className="font-medium">{event.startTime} - {event.endTime}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Spots:</span>
+                        <div className="font-medium">{event.spotsRemaining}/{event.totalSpots}</div>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Neighbourhood:</span>
+                        <div className="font-medium truncate">{event.neighbourhood}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline"  className="flex-1" onClick={() => setLocation(`/admin/events/${event.id}`)}>
+                        Edit
+                      </Button>
+                      <Button variant="outline"  className="flex-1" onClick={() => handleDeleteEvent(event.id)}>
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -152,25 +195,27 @@ export default function AdminEvents() {
           )}
 
           {data?.pagination && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
                 Showing {((data.pagination.page - 1) * data.pagination.limit) + 1} to{' '}
                 {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} of{' '}
                 {data.pagination.total} events
               </div>
               <div className="flex gap-2">
-                                 <Button
-                   variant="outline"
-                   disabled={page === 1}
-                   onClick={() => setPage(page - 1)}
-                 >
+                <Button
+                  variant="outline"
+                  
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
                   Previous
                 </Button>
-                                 <Button
-                   variant="outline"
-                   disabled={page >= data.pagination.pages}
-                   onClick={() => setPage(page + 1)}
-                 >
+                <Button
+                  variant="outline"
+                  
+                  disabled={page >= data.pagination.pages}
+                  onClick={() => setPage(page + 1)}
+                >
                   Next
                 </Button>
               </div>
@@ -180,7 +225,7 @@ export default function AdminEvents() {
       </Card>
 
       <Dialog.Root open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <Dialog.Content>
+        <Dialog.Content className="max-h-[90vh] overflow-y-auto mx-4 max-w-lg">
           <Dialog.Title>Create New Event</Dialog.Title>
           <Dialog.Description>Fill in the details for the new dinner event.</Dialog.Description>
           <CreateEventForm 
@@ -229,7 +274,7 @@ function CreateEventForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Date</Label>
           <Input type="date" {...form.register('date')} />
@@ -247,7 +292,7 @@ function CreateEventForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Start Time</Label>
           <Input type="time" {...form.register('startTime')} />
@@ -294,11 +339,11 @@ function CreateEventForm({
         )}
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => form.reset()}>
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">
           Reset
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? 'Creating...' : 'Create Event'}
         </Button>
       </div>
