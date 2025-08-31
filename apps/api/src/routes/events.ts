@@ -1,22 +1,16 @@
 import express from 'express';
 import { z } from 'zod';
 import { db } from '../db/client';
-import { events, participants } from '../db/schema';
+import { events } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { getCurrentUser, requireAuth } from '../auth';
 
 const router = express.Router();
 
 const createEventSchema = z.object({
-  title: z.string().min(1),
-  description: z.string(),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  neighbourhoodId: z.number(),
-  format: z.enum(['rotating', 'hosted']),
-  totalSpots: z.number().min(2),
-  hostId: z.number(),
 });
 
 const joinEventSchema = z.object({
@@ -37,33 +31,6 @@ const joinEventSchema = z.object({
  *     responses:
  *       200:
  *         description: List of user's events
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   title:
- *                     type: string
- *                   date:
- *                     type: string
- *                     format: date
- *                   startTime:
- *                     type: string
- *                   endTime:
- *                     type: string
- *                   format:
- *                     type: string
- *                     enum: [rotating, hosted]
- *                   neighbourhood:
- *                     type: string
- *                   coursePreference:
- *                     type: string
- *                   isHost:
- *                     type: boolean
  *       401:
  *         description: Unauthorized
  */
@@ -71,53 +38,193 @@ router.get('/my-events', requireAuth, async (req, res) => {
   try {
     const user = (req as any).user;
     
-    const userEvents = await db.query.participants.findMany({
-      where: (p, { eq }) => eq(p.userId, user.userId),
+    // Get user's circles for events
+    const userCircles = await db.query.circleMembers.findMany({
+      where: (cm, { eq }) => eq(cm.userId, user.userId),
       with: {
-        event: {
+        circle: {
           with: {
-            neighbourhood: true,
+            event: true,
           },
         },
       },
     });
 
-    // Get partner information for events that have partners
-    const eventsWithPartners = await Promise.all(
-      userEvents.map(async (participation) => {
-        let partnerName = null;
-        
-        if (participation.partnerId) {
-          const partner = await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, participation.partnerId!),
-            columns: {
-              name: true,
-            },
-          });
-          partnerName = partner?.name || null;
-        }
+    const eventsWithCircles = userCircles.map(circleMember => ({
+      id: circleMember.circle.event.id,
+      title: `Dinner Event - ${new Date(circleMember.circle.event.date).toLocaleDateString()}`,
+      description: `Join us for dinner on ${new Date(circleMember.circle.event.date).toLocaleDateString()} from ${circleMember.circle.event.startTime} to ${circleMember.circle.event.endTime}`,
+      date: circleMember.circle.event.date,
+      startTime: circleMember.circle.event.startTime,
+      endTime: circleMember.circle.event.endTime,
+      format: circleMember.circle.format,
+      neighbourhood: 'TBD', // Will be determined by matching
+      role: circleMember.role,
+      circleName: circleMember.circle.name,
+      createdAt: circleMember.circle.event.createdAt,
+    }));
 
-        return {
-          id: participation.event.id,
-          title: participation.event.title,
-          description: participation.event.description,
-          date: participation.event.date,
-          startTime: participation.event.startTime,
-          endTime: participation.event.endTime,
-          format: participation.event.format,
-          neighbourhood: participation.event.neighbourhood.name,
-          coursePreference: participation.coursePreference,
-          isHost: participation.isHost,
-          registeredAt: participation.registeredAt,
-          partnerId: participation.partnerId,
-          partnerName,
-        };
-      })
-    );
-
-    return res.json(eventsWithPartners);
+    return res.json(eventsWithCircles);
   } catch (error) {
     console.error('Get my events error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/my-opted-in:
+ *   get:
+ *     summary: Get events the current user has opted in for but hasn't been matched yet
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of events user has opted in for
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-opted-in', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Get events user has opted in for
+    const optedInEvents = await db.query.matchingPool.findMany({
+      where: (mp, { eq }) => eq(mp.userId, user.userId),
+      with: {
+        event: true,
+      },
+    });
+
+    // Filter to only include future events that are still open for matching
+    const futureOptedInEvents = optedInEvents
+      .filter(optIn => {
+        const eventDate = new Date(optIn.event.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        return eventDate > today && optIn.event.matchingStatus === 'open';
+      })
+      .map(optIn => ({
+        id: optIn.event.id,
+        date: optIn.event.date,
+        startTime: optIn.event.startTime,
+        endTime: optIn.event.endTime,
+        matchingStatus: optIn.event.matchingStatus,
+        createdAt: optIn.event.createdAt,
+      }));
+
+    return res.json(futureOptedInEvents);
+  } catch (error) {
+    console.error('Get my opted-in events error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/my-past-events:
+ *   get:
+ *     summary: Get current user's past events with highlights
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's past events with highlights
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-past-events', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Get user's circles for past events
+    const userCircles = await db.query.circleMembers.findMany({
+      where: (cm, { eq }) => eq(cm.userId, user.userId),
+      with: {
+        circle: {
+          with: {
+            event: true,
+            members: {
+              with: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Filter to only include past events and transform the data
+    const pastEvents = userCircles
+      .filter(circleMember => {
+        const eventDate = new Date(circleMember.circle.event.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return eventDate < today;
+      })
+      .map(async (circleMember) => {
+        // Get user's rating for this event
+        const rating = await db.query.eventRatings.findFirst({
+          where: (er, { and, eq }) => and(
+            eq(er.eventId, circleMember.circle.event.id),
+            eq(er.raterId, user.userId)
+          ),
+        });
+
+        // Get user's testimonial for this event (testimonials don't have eventId, so we'll skip this for now)
+        const testimonial = null;
+
+        // Get points earned for this event
+        const pointsTransaction = await db.query.pointTransactions.findFirst({
+          where: (pt, { and, eq }) => and(
+            eq(pt.eventId, circleMember.circle.event.id),
+            eq(pt.userId, user.userId)
+          ),
+        });
+
+        // Get badges earned for this event (userBadges don't have eventId, so we'll skip this for now)
+        const badges: string[] = [];
+
+        return {
+          id: circleMember.circle.event.id,
+          date: circleMember.circle.event.date,
+          startTime: circleMember.circle.event.startTime,
+          endTime: circleMember.circle.event.endTime,
+          circle: {
+            id: circleMember.circle.id,
+            name: circleMember.circle.name,
+            format: circleMember.circle.format,
+            members: circleMember.circle.members.map(member => ({
+              userId: member.userId,
+              role: member.role,
+              user: {
+                id: member.user.id,
+                name: member.user.name,
+                interests: member.user.interests,
+                dietaryRestrictions: member.user.dietaryRestrictions,
+                cookingExperience: member.user.cookingExperience,
+                personalityType: member.user.personalityType,
+                socialPreferences: member.user.socialPreferences,
+              },
+            })),
+          },
+          highlights: {
+            rating: rating?.overallRating || null,
+            testimonial: testimonial || null,
+            pointsEarned: pointsTransaction?.pointsEarned || 0,
+            badgesEarned: badges,
+          },
+        };
+      });
+
+    const pastEventsWithHighlights = await Promise.all(pastEvents);
+
+    return res.json(pastEventsWithHighlights);
+  } catch (error) {
+    console.error('Get my past events error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -137,19 +244,6 @@ router.get('/my-events', requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List of potential partners
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   name:
- *                     type: string
- *                   username:
- *                     type: string
  */
 router.get('/partners/search', async (req, res) => {
   try {
@@ -191,12 +285,6 @@ router.get('/partners/search', async (req, res) => {
  *     responses:
  *       200:
  *         description: List of upcoming events
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Event'
  */
 router.get('/', async (req, res) => {
   try {
@@ -207,30 +295,108 @@ router.get('/', async (req, res) => {
       where: (e, { gte }) => gte(e.date, today.toISOString().split('T')[0]),
       orderBy: [events.date],
       with: {
-        neighbourhood: true,
-        participants: true,
+        matchingPool: true,
+        circles: true,
       },
     });
 
-    // Calculate spotsRemaining for each event
+    // Transform events for the new matching system
     const eventsWithSpots = upcomingEvents.map(event => ({
       id: event.id,
-      title: event.title,
-      description: event.description,
+      title: `Dinner Event - ${new Date(event.date).toLocaleDateString()}`,
+      description: `Join us for dinner on ${new Date(event.date).toLocaleDateString()} from ${event.startTime} to ${event.endTime}`,
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      totalSpots: event.totalSpots,
-      spotsRemaining: Math.max(0, event.totalSpots - event.participants.length),
-      format: event.format,
-      neighbourhood: event.neighbourhood.name,
-      isWaitlist: event.isWaitlist,
+      totalSpots: 0, // No longer relevant in matching system
+      spotsRemaining: 0, // No longer relevant in matching system
+      format: 'matching', // All events are now matching-based
+      neighbourhood: 'TBD', // Will be determined by matching
+      isWaitlist: false, // No longer relevant in matching system
       createdAt: event.createdAt,
+      matchingStatus: event.matchingStatus,
+      optInCount: event.matchingPool.length,
+      circleCount: event.circles.length,
     }));
 
     return res.json(eventsWithSpots);
   } catch (error) {
     console.error('Get events error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/my-matched-events:
+ *   get:
+ *     summary: Get current user's matched events with circle details
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's matched events with circle information
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-matched-events', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Get user's circles for future events
+    const userCircles = await db.query.circleMembers.findMany({
+      where: (cm, { eq }) => eq(cm.userId, user.userId),
+      with: {
+        circle: {
+          with: {
+            event: true,
+            members: {
+              with: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Filter to only include future events and transform the data
+    const futureMatchedEvents = userCircles
+      .filter(circleMember => {
+        const eventDate = new Date(circleMember.circle.event.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return eventDate > today;
+      })
+      .map(circleMember => ({
+        id: circleMember.circle.event.id,
+        date: circleMember.circle.event.date,
+        startTime: circleMember.circle.event.startTime,
+        endTime: circleMember.circle.event.endTime,
+        circle: {
+          id: circleMember.circle.id,
+          name: circleMember.circle.name,
+          format: circleMember.circle.format,
+          members: circleMember.circle.members.map(member => ({
+            userId: member.userId,
+            role: member.role,
+            user: {
+              id: member.user.id,
+              name: member.user.name,
+              interests: member.user.interests,
+              dietaryRestrictions: member.user.dietaryRestrictions,
+              cookingExperience: member.user.cookingExperience,
+              personalityType: member.user.personalityType,
+              socialPreferences: member.user.socialPreferences,
+            },
+          })),
+        },
+      }));
+
+    return res.json(futureMatchedEvents);
+  } catch (error) {
+    console.error('Get my matched events error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -265,20 +431,20 @@ router.get('/:id/my-participation', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid event ID' });
     }
 
-    // Check if user is participating in this event
-    const participation = await db.query.participants.findFirst({
-      where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, user.userId)),
+    // Check if user is opted in for this event
+    const optIn = await db.query.matchingPool.findFirst({
+      where: (mp, { and, eq }) => and(eq(mp.eventId, eventId), eq(mp.userId, user.userId)),
     });
 
-    if (!participation) {
+    if (!optIn) {
       return res.json(null); // Return null instead of 404
     }
 
     // Get partner information if exists
     let partnerName = null;
-    if (participation.partnerId) {
+    if (optIn.partnerId) {
       const partner = await db.query.users.findFirst({
-        where: (u, { eq }) => eq(u.id, participation.partnerId!),
+        where: (u, { eq }) => eq(u.id, optIn.partnerId!),
         columns: {
           name: true,
         },
@@ -287,13 +453,13 @@ router.get('/:id/my-participation', requireAuth, async (req, res) => {
     }
 
     return res.json({
-      id: participation.id,
-      eventId: participation.eventId,
-      userId: participation.userId,
-      coursePreference: participation.coursePreference,
-      isHost: participation.isHost,
-      registeredAt: participation.registeredAt,
-      partnerId: participation.partnerId,
+      id: optIn.id,
+      eventId: optIn.eventId,
+      userId: optIn.userId,
+      matchAddress: optIn.matchAddress,
+      hostingAvailable: optIn.hostingAvailable,
+      createdAt: optIn.createdAt,
+      partnerId: optIn.partnerId,
       partnerName,
     });
   } catch (error) {
@@ -336,8 +502,8 @@ router.get('/:id', async (req, res) => {
     const event = await db.query.events.findFirst({
       where: (e, { eq }) => eq(e.id, eventId),
       with: {
-        neighbourhood: true,
-        participants: true,
+        matchingPool: true,
+        circles: true,
       },
     });
 
@@ -345,22 +511,25 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Transform the response to include neighbourhood name and calculated spotsRemaining
-    const eventWithNeighbourhood = {
+    // Transform the response for the new matching system
+    const eventWithDetails = {
       id: event.id,
-      title: event.title,
-      description: event.description,
+      title: `Dinner Event - ${new Date(event.date).toLocaleDateString()}`,
+      description: `Join us for dinner on ${new Date(event.date).toLocaleDateString()} from ${event.startTime} to ${event.endTime}`,
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      format: event.format,
-      neighbourhood: event.neighbourhood.name,
-      totalSpots: event.totalSpots,
-      spotsRemaining: Math.max(0, event.totalSpots - event.participants.length),
+      format: 'matching', // All events are now matching-based
+      neighbourhood: 'TBD', // Will be determined by matching
+      totalSpots: 0, // No longer relevant in matching system
+      spotsRemaining: 0, // No longer relevant in matching system
       createdAt: event.createdAt,
+      matchingStatus: event.matchingStatus,
+      optInCount: event.matchingPool.length,
+      circleCount: event.circles.length,
     };
 
-    return res.json(eventWithNeighbourhood);
+    return res.json(eventWithDetails);
   } catch (error) {
     console.error('Get event error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -375,43 +544,6 @@ router.get('/:id', async (req, res) => {
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - description
- *               - date
- *               - startTime
- *               - endTime
- *               - neighbourhoodId
- *               - format
- *               - totalSpots
- *               - hostId
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               date:
- *                 type: string
- *                 format: date
- *               startTime:
- *                 type: string
- *               endTime:
- *                 type: string
- *               neighbourhoodId:
- *                 type: integer
- *               format:
- *                 type: string
- *                 enum: [rotating, hosted]
- *               totalSpots:
- *                 type: integer
- *               hostId:
- *                 type: integer
  *     responses:
  *       201:
  *         description: Event created successfully
@@ -453,22 +585,6 @@ router.post('/', requireAuth, async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - eventId
- *             properties:
- *               eventId:
- *                 type: integer
- *               coursePreference:
- *                 type: string
- *                 enum: [starter, main, dessert]
- *               isHost:
- *                 type: boolean
  *     responses:
  *       200:
  *         description: Successfully joined event
@@ -504,206 +620,17 @@ router.post('/:id/join', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Check if user is already participating
-    const existingParticipation = await db.query.participants.findFirst({
-      where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, user.userId)),
+    // This endpoint is deprecated - use the matching system instead
+    return res.status(400).json({ 
+      error: 'This endpoint is deprecated. Please use the matching system to opt-in to events.' 
     });
-
-    if (existingParticipation) {
-      return res.status(400).json({ error: 'Already participating in this event' });
-    }
-
-    // Validate partner requirements for rotating dinners
-    if (event.format === 'rotating') {
-      // For rotating dinners, partner is required
-      if (!parsed.data.partnerId) {
-        return res.status(400).json({ 
-          error: 'Partner is required for rotating dinners. Please provide partner details.' 
-        });
-      }
-      
-      // Course preference is required for rotating dinners
-      if (!parsed.data.coursePreference) {
-        return res.status(400).json({ 
-          error: 'Course preference is required for rotating dinners. Please select your preferred course to host.' 
-        });
-      }
-    }
-
-    // Check available space before joining
-    const currentParticipants = await db.query.participants.findMany({
-      where: (p, { eq }) => eq(p.eventId, eventId),
-    });
-
-    const spotsNeeded = parsed.data.partnerId ? 2 : 1; // Need 2 spots if bringing a partner
-    const availableSpots = event.totalSpots - currentParticipants.length;
-
-    if (availableSpots < spotsNeeded) {
-      return res.status(400).json({ 
-        error: `Not enough spots available. Need ${spotsNeeded} spot(s), but only ${availableSpots} available.` 
-      });
-    }
-
-    // Join the event
-    const [participation] = await db.insert(participants).values({
-      eventId,
-      userId: user.userId,
-      coursePreference: parsed.data.coursePreference,
-      isHost: parsed.data.isHost,
-      partnerId: parsed.data.partnerId,
-    }).returning();
-
-    // If a partner is specified, also register the partner for the event
-    if (parsed.data.partnerId) {
-      // Check if partner is already participating
-      const partnerParticipation = await db.query.participants.findFirst({
-        where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, parsed.data.partnerId!)),
-      });
-
-      if (!partnerParticipation) {
-        // Register the partner
-        await db.insert(participants).values({
-          eventId,
-          userId: parsed.data.partnerId!,
-          coursePreference: parsed.data.coursePreference, // Partner gets same course preference
-          isHost: false, // Partner is not a host by default
-          partnerId: user.userId, // Link back to the main user
-        });
-      }
-    }
-
-    return res.json(participation);
   } catch (error) {
     console.error('Join event error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * @swagger
- * /api/events/{id}/participants:
- *   get:
- *     summary: Get event participants
- *     tags: [Events]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: List of participants
- *       404:
- *         description: Event not found
- */
-router.get('/:id/participants', async (req, res) => {
-  try {
-    const eventId = parseInt(req.params.id);
-    
-    // Validate that eventId is a valid number
-    if (isNaN(eventId)) {
-      return res.status(400).json({ error: 'Invalid event ID' });
-    }
-    
-    const participantsList = await db.query.participants.findMany({
-      where: (p, { eq }) => eq(p.eventId, eventId),
-      with: {
-        user: true,
-      },
-    });
-
-    return res.json(participantsList);
-  } catch (error) {
-    console.error('Get participants error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * @swagger
- * /api/events/{id}/leave:
- *   delete:
- *     summary: Leave an event (opt out)
- *     tags: [Events]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Successfully left the event
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Event or participation not found
- */
-router.delete('/:id/leave', requireAuth, async (req, res) => {
-  try {
-    const user = (req as any).user;
-    const eventId = parseInt(req.params.id);
-    
-    // Validate that eventId is a valid number
-    if (isNaN(eventId)) {
-      return res.status(400).json({ error: 'Invalid event ID' });
-    }
-
-    // Check if event exists
-    const event = await db.query.events.findFirst({
-      where: (e, { eq }) => eq(e.id, eventId),
-    });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-
-    // Check if user is participating in this event
-    const participation = await db.query.participants.findFirst({
-      where: (p, { and, eq }) => and(eq(p.eventId, eventId), eq(p.userId, user.userId)),
-    });
-
-    if (!participation) {
-      return res.status(404).json({ error: 'You are not participating in this event' });
-    }
-
-    // Get partner information before removing participation
-    const partnerId = participation.partnerId;
-
-    // Remove the user's participation
-    await db.delete(participants).where(
-      and(
-        eq(participants.eventId, eventId),
-        eq(participants.userId, user.userId)
-      )
-    );
-
-    // If user had a partner, also remove the partner's participation
-    if (partnerId) {
-      await db.delete(participants).where(
-        and(
-          eq(participants.eventId, eventId),
-          eq(participants.userId, partnerId)
-        )
-      );
-    }
-
-    // No need to update spotsRemaining since it's calculated dynamically
-
-    return res.json({ 
-      message: 'Successfully left the event',
-      partnerRemoved: !!partnerId 
-    });
-  } catch (error) {
-    console.error('Leave event error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// These endpoints are deprecated - use the matching system instead
 
 export default router;
 

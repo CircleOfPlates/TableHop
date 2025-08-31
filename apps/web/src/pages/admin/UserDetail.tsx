@@ -5,7 +5,7 @@ import { api } from '../../lib/api'
 import { toast } from 'sonner'
 import AdminGuard from '../../components/AdminGuard'
 import { useLocation, useRoute } from 'wouter'
-import { ArrowLeft, Save, User, Mail, MapPin, Calendar, Shield } from 'lucide-react'
+import { ArrowLeftIcon, CheckIcon, UserIcon, EnvelopeIcon, MapPinIcon, CalendarIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 
 interface UserDetail {
   id: number
@@ -100,16 +100,16 @@ export default function AdminUserDetail() {
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/admin/users')}
+            onClick={() => setLocation('/admin/Users')}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeftIcon className="w-4 h-4" />
             Back to Users
           </Button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">User Details</h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Manage user account and permissions
+              Manage User account and permissions
             </p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function AdminUserDetail() {
                 <div className="p-4 sm:p-6 space-y-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
-                      <User className="w-5 h-5" />
+                      <UserIcon className="w-5 h-5" />
                       Basic Information
                     </h2>
                     {!isEditing && (
@@ -147,7 +147,7 @@ export default function AdminUserDetail() {
                         )}
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Username</label>
+                        <label className="text-sm font-medium text-muted-foreground">username</label>
                         {isEditing ? (
                           <Input
                             value={editData.username || user.username}
@@ -162,8 +162,8 @@ export default function AdminUserDetail() {
 
                     <div>
                       <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                        <Mail className="w-4 h-4" />
-                        Email Address
+                        <EnvelopeIcon className="w-4 h-4" />
+                        email Address
                       </label>
                       {isEditing ? (
                         <Input
@@ -179,7 +179,7 @@ export default function AdminUserDetail() {
 
                     <div>
                       <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
+                        <MapPinIcon className="w-4 h-4" />
                         Neighbourhood
                       </label>
                       {isEditing ? (
@@ -195,7 +195,7 @@ export default function AdminUserDetail() {
 
                     <div>
                       <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                        <Shield className="w-4 h-4" />
+                        <ShieldCheckIcon className="w-4 h-4" />
                         Role
                       </label>
                       {isEditing ? (
@@ -206,7 +206,7 @@ export default function AdminUserDetail() {
                             </Button>
                           </DropdownMenu.Trigger>
                           <DropdownMenu.Content>
-                            <DropdownMenu.Item onClick={() => setEditData({ ...editData, role: 'user' })}>
+                            <DropdownMenu.Item onClick={() => setEditData({ ...editData, role: 'User' })}>
                               User
                             </DropdownMenu.Item>
                             <DropdownMenu.Item onClick={() => setEditData({ ...editData, role: 'admin' })}>
@@ -230,7 +230,7 @@ export default function AdminUserDetail() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
+                          <CalendarIcon className="w-4 h-4" />
                           Created
                         </label>
                         <p className="text-sm mt-1">{new Date(user.createdAt).toLocaleDateString()}</p>
@@ -245,7 +245,7 @@ export default function AdminUserDetail() {
                   {isEditing && (
                     <div className="flex gap-2 pt-4">
                       <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
-                        <Save className="w-4 h-4 mr-2" />
+                        <CheckIcon className="w-4 h-4 mr-2" />
                         {updateUserMutation.isPending ? 'Saving...' : 'Save Changes'}
                       </Button>
                       <Button variant="outline" onClick={handleCancel}>

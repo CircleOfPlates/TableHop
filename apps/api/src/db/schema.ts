@@ -1,5 +1,6 @@
 import { pgTable, serial, integer, text, boolean, timestamp, date, time, jsonb, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { EVENT_STATUS, CIRCLE_FORMAT, CIRCLE_ROLES } from '../config/constants';
 
 // Users
 export const users = pgTable('users', {
@@ -32,47 +33,16 @@ export const neighbourhoods = pgTable('neighbourhoods', {
   zip: varchar('zip', { length: 20 }),
 });
 
-// Events
+// Events (simplified for matching system - only date and time)
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
-  title: varchar('title', { length: 200 }).notNull(),
-  description: text('description'),
-  neighbourhoodId: integer('neighbourhood_id').references(() => neighbourhoods.id).notNull(),
   date: date('date').notNull(),
   startTime: time('start_time', { withTimezone: false }).notNull(),
   endTime: time('end_time', { withTimezone: false }).notNull(),
-  totalSpots: integer('total_spots').notNull(),
-  isWaitlist: boolean('is_waitlist').default(false).notNull(),
+  matchingStatus: varchar('matching_status', { length: 20 }).default(EVENT_STATUS.OPEN).notNull(),
+  matchingTriggeredAt: timestamp('matching_triggered_at', { withTimezone: true }),
+  matchingCompletedAt: timestamp('matching_completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  format: varchar('format', { length: 20 }).notNull(), // 'rotating' | 'hosted'
-});
-
-// Participants
-export const participants = pgTable(
-  'participants',
-  {
-    id: serial('id').primaryKey(),
-    eventId: integer('event_id').references(() => events.id).notNull(),
-    userId: integer('user_id').references(() => users.id).notNull(),
-    partnerId: integer('partner_id').references(() => users.id),
-    coursePreference: varchar('course_preference', { length: 20 }),
-    courseAssigned: varchar('course_assigned', { length: 20 }),
-    isHost: boolean('is_host').default(false).notNull(),
-    registeredAt: timestamp('registered_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    userEventUnique: uniqueIndex('participants_user_event_idx').on(table.userId, table.eventId),
-  })
-);
-
-// Dinner Groups
-export const dinnerGroups = pgTable('dinner_groups', {
-  id: serial('id').primaryKey(),
-  eventId: integer('event_id').references(() => events.id).notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  starterParticipantId: integer('starter_participant_id').references(() => participants.id),
-  mainParticipantId: integer('main_participant_id').references(() => participants.id),
-  dessertParticipantId: integer('dessert_participant_id').references(() => participants.id),
 });
 
 // Testimonials
@@ -93,7 +63,7 @@ export const userBadges = pgTable('user_badges', {
   awardedAt: timestamp('awarded_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Event Ratings
+// Event Ratings (for circle members to rate each other)
 export const eventRatings = pgTable('event_ratings', {
   id: serial('id').primaryKey(),
   eventId: integer('event_id').references(() => events.id).notNull(),
@@ -139,9 +109,61 @@ export const pointRedemptions = pgTable('point_redemptions', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Matching Pool (users who opt-in to be matched)
+export const matchingPool = pgTable('matching_pool', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id').references(() => events.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  partnerId: integer('partner_id').references(() => users.id),
+  matchAddress: text('match_address'),
+  hostingAvailable: boolean('hosting_available').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userEventUnique: uniqueIndex('matching_pool_user_event_idx').on(table.userId, table.eventId),
+}));
+
+// Circles (groups of 6 users assigned after matching)
+export const circles = pgTable('circles', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id').references(() => events.id).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  format: varchar('format', { length: 20 }).notNull(), // 'rotating' or 'hosted'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Circle Members (users assigned to circles)
+export const circleMembers = pgTable('circle_members', {
+  id: serial('id').primaryKey(),
+  circleId: integer('circle_id').references(() => circles.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  role: varchar('role', { length: 20 }).notNull(), // 'host', 'participant', 'starter', 'main', 'dessert'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  circleUserUnique: uniqueIndex('circle_members_circle_user_idx').on(table.circleId, table.userId),
+}));
+
+// Email Notifications
+export const emailNotifications = pgTable('email_notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'matching_triggered', 'circle_assigned', 'partner_opt_in'
+  subject: varchar('subject', { length: 200 }).notNull(),
+  body: text('body').notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+  status: varchar('status', { length: 20 }).default('pending').notNull(), // 'pending', 'sent', 'failed'
+});
+
+// Chat Messages for circle communication
+export const chatMessages = pgTable('chat_messages', {
+  id: serial('id').primaryKey(),
+  circleId: integer('circle_id').references(() => circles.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  message: text('message').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
-  participants: many(participants),
   eventRatings: many(eventRatings, { relationName: 'rater' }),
   ratedBy: many(eventRatings, { relationName: 'ratedUser' }),
   testimonials: many(testimonials),
@@ -149,42 +171,22 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   userPoints: one(userPoints),
   pointTransactions: many(pointTransactions),
   pointRedemptions: many(pointRedemptions),
+  matchingPool: many(matchingPool),
+  circleMembers: many(circleMembers),
+  emailNotifications: many(emailNotifications),
+  chatMessages: many(chatMessages),
 }));
 
 export const neighbourhoodsRelations = relations(neighbourhoods, ({ many }) => ({
-  events: many(events),
   testimonials: many(testimonials),
 }));
 
-export const eventsRelations = relations(events, ({ many, one }) => ({
-  participants: many(participants),
+export const eventsRelations = relations(events, ({ many }) => ({
   eventRatings: many(eventRatings),
-  dinnerGroups: many(dinnerGroups),
   pointTransactions: many(pointTransactions),
   pointRedemptions: many(pointRedemptions),
-  neighbourhood: one(neighbourhoods, {
-    fields: [events.neighbourhoodId],
-    references: [neighbourhoods.id],
-  }),
-}));
-
-export const participantsRelations = relations(participants, ({ one, many }) => ({
-  event: one(events, {
-    fields: [participants.eventId],
-    references: [events.id],
-  }),
-  user: one(users, {
-    fields: [participants.userId],
-    references: [users.id],
-  }),
-  partner: one(users, {
-    fields: [participants.partnerId],
-    references: [users.id],
-    relationName: 'partner',
-  }),
-  dinnerGroupsAsStarter: many(dinnerGroups, { relationName: 'starterParticipant' }),
-  dinnerGroupsAsMain: many(dinnerGroups, { relationName: 'mainParticipant' }),
-  dinnerGroupsAsDessert: many(dinnerGroups, { relationName: 'dessertParticipant' }),
+  matchingPool: many(matchingPool),
+  circles: many(circles),
 }));
 
 export const eventRatingsRelations = relations(eventRatings, ({ one }) => ({
@@ -251,26 +253,56 @@ export const pointRedemptionsRelations = relations(pointRedemptions, ({ one }) =
   }),
 }));
 
-export const dinnerGroupsRelations = relations(dinnerGroups, ({ one }) => ({
+export const matchingPoolRelations = relations(matchingPool, ({ one }) => ({
   event: one(events, {
-    fields: [dinnerGroups.eventId],
+    fields: [matchingPool.eventId],
     references: [events.id],
   }),
-  starterParticipant: one(participants, {
-    fields: [dinnerGroups.starterParticipantId],
-    references: [participants.id],
-    relationName: 'starterParticipant',
+  user: one(users, {
+    fields: [matchingPool.userId],
+    references: [users.id],
   }),
-  mainParticipant: one(participants, {
-    fields: [dinnerGroups.mainParticipantId],
-    references: [participants.id],
-    relationName: 'mainParticipant',
-  }),
-  dessertParticipant: one(participants, {
-    fields: [dinnerGroups.dessertParticipantId],
-    references: [participants.id],
-    relationName: 'dessertParticipant',
+  partner: one(users, {
+    fields: [matchingPool.partnerId],
+    references: [users.id],
+    relationName: 'partner',
   }),
 }));
 
+export const circlesRelations = relations(circles, ({ one, many }) => ({
+  event: one(events, {
+    fields: [circles.eventId],
+    references: [events.id],
+  }),
+  members: many(circleMembers),
+  chatMessages: many(chatMessages),
+}));
 
+export const circleMembersRelations = relations(circleMembers, ({ one }) => ({
+  circle: one(circles, {
+    fields: [circleMembers.circleId],
+    references: [circles.id],
+  }),
+  user: one(users, {
+    fields: [circleMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const emailNotificationsRelations = relations(emailNotifications, ({ one }) => ({
+  user: one(users, {
+    fields: [emailNotifications.userId],
+    references: [users.id],
+  }),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  circle: one(circles, {
+    fields: [chatMessages.circleId],
+    references: [circles.id],
+  }),
+  user: one(users, {
+    fields: [chatMessages.userId],
+    references: [users.id],
+  }),
+}));

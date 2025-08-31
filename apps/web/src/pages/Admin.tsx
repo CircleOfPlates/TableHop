@@ -60,13 +60,13 @@ export default function Admin() {
           <div className="p-6 space-y-4">
             <h3 className="font-semibold">Quick Actions</h3>
             <div className="space-y-2">
-              <Button variant="outline" onClick={() => setLocation('/admin/events/create')} className="w-full">
+              <Button variant="outline" onClick={() => setLocation('/admin/events')} className="w-full">
                 Create New Event
               </Button>
-              <Button variant="outline" onClick={() => setLocation('/admin/admins/create')} className="w-full">
+              <Button variant="outline" onClick={() => setLocation('/admin/admins')} className="w-full">
                 Create Admin User
               </Button>
-              <Button variant="outline" onClick={() => setLocation('/admin/matching')} className="w-full">
+              <Button variant="outline" onClick={() => setLocation('/admin/events')} className="w-full">
                 Trigger Matching
               </Button>
             </div>

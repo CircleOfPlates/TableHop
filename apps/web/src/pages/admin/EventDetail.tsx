@@ -5,7 +5,7 @@ import { api } from '../../lib/api'
 import { toast } from 'sonner'
 import AdminGuard from '../../components/AdminGuard'
 import { useLocation, useRoute } from 'wouter'
-import { ArrowLeft, Save, Calendar, Clock, Users, MapPin, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeftIcon, CheckIcon, CalendarIcon, ClockIcon, UsersIcon, MapPinIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -65,7 +65,7 @@ export default function AdminEventDetail() {
   const [, setLocation] = useLocation()
   const [, params] = useRoute('/admin/events/:id')
   const queryClient = useQueryClient()
-  const [isEditing, setIsEditing] = useState(false)
+  const [isPencilIconing, setIsPencilIconing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   // Extract event ID from URL params
@@ -88,7 +88,7 @@ export default function AdminEventDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-event-detail', eventId] })
       queryClient.invalidateQueries({ queryKey: ['admin-events'] })
-      setIsEditing(false)
+      setIsPencilIconing(false)
       toast.success('Event updated successfully')
     },
     onError: (error: any) => {
@@ -154,7 +154,7 @@ export default function AdminEventDetail() {
             onClick={() => setLocation('/admin/events')}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeftIcon className="w-4 h-4" />
             Back to Events
           </Button>
           <div className="flex-1">
@@ -163,18 +163,18 @@ export default function AdminEventDetail() {
               Event details and participant management
             </p>
           </div>
-          {!isEditing && event && (
+          {!isPencilIconing && event && (
             <div className="flex gap-2">
-              <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-                <Edit className="w-4 h-4" />
-                Edit Event
+              <Button onClick={() => setIsPencilIconing(true)} className="flex items-center gap-2">
+                <PencilIcon className="w-4 h-4" />
+                PencilIcon Event
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => setIsDeleteDialogOpen(true)}
                 className="flex items-center gap-2"
               >
-                <Trash2 className="w-4 h-4" />
+                <TrashIcon className="w-4 h-4" />
                 Delete
               </Button>
             </div>
@@ -189,13 +189,13 @@ export default function AdminEventDetail() {
                 <div className="p-4 sm:p-6 space-y-6">
                   <h2 className="text-lg sm:text-xl font-semibold">Event Information</h2>
 
-                  {isEditing ? (
-                    <EditEventForm 
+                  {isPencilIconing ? (
+                    <PencilIconEventForm 
                       event={event}
                       neighbourhoods={neighbourhoods || []}
                       onSubmit={updateEventMutation.mutate}
                       isLoading={updateEventMutation.isPending}
-                      onCancel={() => setIsEditing(false)}
+                      onCancel={() => setIsPencilIconing(false)}
                     />
                   ) : (
                     <div className="space-y-4">
@@ -207,14 +207,14 @@ export default function AdminEventDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
+                            <CalendarIcon className="w-4 h-4" />
                             Date
                           </label>
                           <p className="text-base font-medium mt-1">{new Date(event.date).toLocaleDateString()}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
+                            <ClockIcon className="w-4 h-4" />
                             Time
                           </label>
                           <p className="text-base font-medium mt-1">{event.startTime} - {event.endTime}</p>
@@ -224,7 +224,7 @@ export default function AdminEventDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <Users className="w-4 h-4" />
+                            <UsersIcon className="w-4 h-4" />
                             Spots
                           </label>
                           <p className="text-base font-medium mt-1">{event.spotsRemaining}/{event.totalSpots}</p>
@@ -237,7 +237,7 @@ export default function AdminEventDetail() {
 
                       <div>
                         <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
+                          <MapPinIcon className="w-4 h-4" />
                           Neighbourhood
                         </label>
                         <p className="text-base font-medium mt-1">{event.neighbourhood}</p>
@@ -295,7 +295,7 @@ export default function AdminEventDetail() {
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <UsersIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No participants yet</p>
                     </div>
                   )}
@@ -381,7 +381,7 @@ export default function AdminEventDetail() {
   )
 }
 
-function EditEventForm({ 
+function PencilIconEventForm({ 
   event, 
   neighbourhoods, 
   onSubmit, 
@@ -493,8 +493,8 @@ function EditEventForm({
 
       <div className="flex gap-2 pt-4">
         <Button type="submit" disabled={isLoading} className="flex-1">
-          <Save className="w-4 h-4 mr-2" />
-          {isLoading ? 'Saving...' : 'Save Changes'}
+          <CheckIcon className="w-4 h-4 mr-2" />
+          {isLoading ? 'Saving...' : 'CheckIcon Changes'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancel

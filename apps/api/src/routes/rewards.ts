@@ -154,8 +154,8 @@ router.get('/badges/progress', requireAuth, async (req, res) => {
       where: (ub, { eq }) => eq(ub.userId, user.userId),
     });
 
-    // Get user's event participation stats
-    const userEvents = await db.query.participants.findMany({
+    // Get user's matching pool entries
+    const userEvents = await db.query.matchingPool.findMany({
       where: (p, { eq }) => eq(p.userId, user.userId),
       with: {
         event: true,
@@ -169,17 +169,18 @@ router.get('/badges/progress', requireAuth, async (req, res) => {
       let progress = 0;
       switch (badge.id) {
         case 'first_host':
-          progress = userEvents.filter(p => p.isHost).length;
+          progress = userEvents.filter(p => p.hostingAvailable).length;
           break;
         case 'great_guest':
         case 'connector':
           progress = userEvents.length;
           break;
         case 'rotating_master':
-          progress = userEvents.filter(p => p.event.format === 'rotating').length;
+          // TODO: Update this for new matching system
+          progress = 0; // Will be updated when circles are implemented
           break;
         case 'neighbourhood_champion':
-          progress = userEvents.filter(p => p.isHost).length;
+          progress = userEvents.filter(p => p.hostingAvailable).length;
           break;
         default:
           progress = 0;
@@ -230,8 +231,8 @@ router.post('/badges/check', requireAuth, async (req, res) => {
       where: (ub, { eq }) => eq(ub.userId, user.userId),
     });
 
-    // Get user's event participation stats
-    const userEvents = await db.query.participants.findMany({
+    // Get user's matching pool entries
+    const userEvents = await db.query.matchingPool.findMany({
       where: (p, { eq }) => eq(p.userId, user.userId),
       with: {
         event: true,
@@ -242,7 +243,7 @@ router.post('/badges/check', requireAuth, async (req, res) => {
     const newBadges = [];
 
     // Check for first_host badge
-    if (!earnedBadgeTypes.includes('first_host') && userEvents.filter(p => p.isHost).length >= 1) {
+    if (!earnedBadgeTypes.includes('first_host') && userEvents.filter(p => p.hostingAvailable).length >= 1) {
       await db.insert(userBadges).values({
         userId: user.userId,
         badgeType: 'first_host',
@@ -269,7 +270,8 @@ router.post('/badges/check', requireAuth, async (req, res) => {
     }
 
     // Check for rotating_master badge
-    if (!earnedBadgeTypes.includes('rotating_master') && userEvents.filter(p => p.event.format === 'rotating').length >= 3) {
+    // TODO: Update this for new matching system
+    if (!earnedBadgeTypes.includes('rotating_master') && false) { // userEvents.filter(p => p.event.format === 'rotating').length >= 3) {
       await db.insert(userBadges).values({
         userId: user.userId,
         badgeType: 'rotating_master',
@@ -278,7 +280,7 @@ router.post('/badges/check', requireAuth, async (req, res) => {
     }
 
     // Check for neighbourhood_champion badge
-    if (!earnedBadgeTypes.includes('neighbourhood_champion') && userEvents.filter(p => p.isHost).length >= 5) {
+    if (!earnedBadgeTypes.includes('neighbourhood_champion') && userEvents.filter(p => p.hostingAvailable).length >= 5) {
       await db.insert(userBadges).values({
         userId: user.userId,
         badgeType: 'neighbourhood_champion',

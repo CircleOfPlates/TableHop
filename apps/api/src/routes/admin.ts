@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { db } from '../db/client';
-import { users, events, participants, neighbourhoods } from '../db/schema';
+import { users, events, neighbourhoods, matchingPool, circles, circleMembers } from '../db/schema';
 import { eq, desc, count, sql } from 'drizzle-orm';
 import { requireAdmin } from '../auth';
 
@@ -132,9 +132,9 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
     }
 
     // Get user statistics
-    const [participantCount] = await db.select({
-      count: count(participants.id),
-    }).from(participants).where(eq(participants.userId, userId));
+    const [matchingCount] = await db.select({
+      count: count(matchingPool.id),
+    }).from(matchingPool).where(eq(matchingPool.userId, userId));
 
     // For now, return basic user info with placeholder stats
     // TODO: Implement actual points and badges calculation
@@ -146,7 +146,7 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
       role: user.role,
       neighbourhood: user.neighbourhood,
       createdAt: user.createdAt,
-      eventsParticipated: participantCount.count,
+      eventsParticipated: matchingCount.count,
       totalPoints: 0, // TODO: Calculate from points table
       badgesEarned: 0, // TODO: Calculate from badges table
     };
@@ -295,13 +295,26 @@ router.get('/events', requireAdmin, async (req, res) => {
   try {
     const allEvents = await db.query.events.findMany({
       with: {
-        neighbourhood: true,
-        participants: {
+        matchingPool: {
           with: {
             user: {
               columns: {
                 id: true,
                 username: true,
+              },
+            },
+          },
+        },
+        circles: {
+          with: {
+            members: {
+              with: {
+                user: {
+                  columns: {
+                    id: true,
+                    username: true,
+                  },
+                },
               },
             },
           },
@@ -313,16 +326,15 @@ router.get('/events', requireAdmin, async (req, res) => {
     // Transform the data to match frontend expectations
     const transformedEvents = allEvents.map(event => ({
       id: event.id,
-      title: event.title,
-      description: event.description,
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      totalSpots: event.totalSpots,
-      spotsRemaining: Math.max(0, event.totalSpots - event.participants.length),
-      format: event.format,
-      neighbourhood: event.neighbourhood?.name || 'Unknown', // Extract neighbourhood name
+      matchingStatus: event.matchingStatus,
+      matchingTriggeredAt: event.matchingTriggeredAt,
+      matchingCompletedAt: event.matchingCompletedAt,
       createdAt: event.createdAt,
+      optInCount: event.matchingPool.length,
+      circleCount: event.circles.length,
     }));
 
     return res.json({
@@ -376,8 +388,7 @@ router.get('/events/:id', requireAdmin, async (req, res) => {
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId),
       with: {
-        neighbourhood: true,
-        participants: {
+        matchingPool: {
           with: {
             user: {
               columns: {
@@ -397,6 +408,22 @@ router.get('/events/:id', requireAdmin, async (req, res) => {
             },
           },
         },
+        circles: {
+          with: {
+            members: {
+              with: {
+                user: {
+                  columns: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -406,24 +433,42 @@ router.get('/events/:id', requireAdmin, async (req, res) => {
 
     const eventDetail = {
       id: event.id,
-      title: event.title,
-      description: event.description,
+      title: `Dinner Event - ${new Date(event.date).toLocaleDateString()}`,
+      description: `Join us for dinner on ${new Date(event.date).toLocaleDateString()} from ${event.startTime} to ${event.endTime}`,
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      totalSpots: event.totalSpots,
-      spotsRemaining: Math.max(0, event.totalSpots - event.participants.length),
-      format: event.format,
-      neighbourhood: event.neighbourhood?.name || 'Unknown',
+      totalSpots: 0, // No longer relevant in matching system
+      spotsRemaining: 0, // No longer relevant in matching system
+      format: 'matching', // All events are now matching-based
+      neighbourhood: 'TBD', // Will be determined by matching
       createdAt: event.createdAt,
-      participants: event.participants.map(p => ({
-        id: p.id,
-        userId: p.userId,
-        user: p.user,
-        partnerId: p.partnerId,
-        partner: p.partner,
-        coursePreference: p.coursePreference,
-        createdAt: p.registeredAt,
+      matchingStatus: event.matchingStatus,
+      matchingTriggeredAt: event.matchingTriggeredAt,
+      matchingCompletedAt: event.matchingCompletedAt,
+      optIns: event.matchingPool.map((optIn: any) => ({
+        id: optIn.id,
+        userId: optIn.userId,
+        user: optIn.user,
+        partnerId: optIn.partnerId,
+        partner: optIn.partner,
+        matchAddress: optIn.matchAddress,
+        hostingAvailable: optIn.hostingAvailable,
+        dietaryRestrictions: optIn.dietaryRestrictions,
+        createdAt: optIn.createdAt,
+      })),
+      circles: event.circles.map((circle: any) => ({
+        id: circle.id,
+        name: circle.name,
+        format: circle.format,
+        members: circle.members.map((member: any) => ({
+          id: member.id,
+          userId: member.userId,
+          user: member.user,
+          role: member.role,
+          createdAt: member.createdAt,
+        })),
+        createdAt: circle.createdAt,
       })),
     };
 
@@ -502,28 +547,21 @@ router.put('/events/:id', requireAdmin, async (req, res) => {
 
     // Update event with provided fields
     const updateData: any = {};
-    if (req.body.title !== undefined) updateData.title = req.body.title;
-    if (req.body.description !== undefined) updateData.description = req.body.description;
     if (req.body.date !== undefined) updateData.date = req.body.date;
     if (req.body.startTime !== undefined) updateData.startTime = req.body.startTime;
     if (req.body.endTime !== undefined) updateData.endTime = req.body.endTime;
-    if (req.body.totalSpots !== undefined) updateData.totalSpots = req.body.totalSpots;
-    if (req.body.format !== undefined) updateData.format = req.body.format;
-    if (req.body.neighbourhoodId !== undefined) updateData.neighbourhoodId = req.body.neighbourhoodId;
 
     const [updatedEvent] = await db.update(events)
       .set(updateData)
       .where(eq(events.id, eventId))
       .returning({
         id: events.id,
-        title: events.title,
-        description: events.description,
         date: events.date,
         startTime: events.startTime,
         endTime: events.endTime,
-        totalSpots: events.totalSpots,
-        format: events.format,
-        neighbourhoodId: events.neighbourhoodId,
+        matchingStatus: events.matchingStatus,
+        matchingTriggeredAt: events.matchingTriggeredAt,
+        matchingCompletedAt: events.matchingCompletedAt,
         createdAt: events.createdAt,
       });
 
@@ -575,8 +613,13 @@ router.delete('/events/:id', requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Delete all participants first (due to foreign key constraint)
-    await db.delete(participants).where(eq(participants.eventId, eventId));
+    // Delete all related data first (due to foreign key constraints)
+    await db.delete(circleMembers).where(eq(circleMembers.circleId, 
+      db.select({ id: circles.id }).from(circles).where(eq(circles.eventId, eventId))
+    ));
+    await db.delete(circles).where(eq(circles.eventId, eventId));
+    await db.delete(matchingPool).where(eq(matchingPool.eventId, eventId));
+    // participants table no longer exists in new schema
     
     // Delete the event
     await db.delete(events).where(eq(events.id, eventId));
@@ -617,7 +660,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
     const [eventStats] = await db.select({
       totalEvents: count(events.id),
       eventsThisMonth: count(events.id),
-      totalParticipants: count(participants.id),
+      totalParticipants: count(matchingPool.id),
     }).from(events);
 
     // Get neighbourhood statistics

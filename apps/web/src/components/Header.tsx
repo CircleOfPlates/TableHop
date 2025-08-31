@@ -60,6 +60,9 @@ export default function Header() {
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/dashboard">Dashboard</a>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item asChild>
+                  <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/rewards">Rewards</a>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/profile">Profile</a>
                 </DropdownMenu.Item>
                 {user?.role === 'admin' && (

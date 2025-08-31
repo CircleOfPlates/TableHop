@@ -247,12 +247,6 @@ const loginSchema = z.object({ identifier: z.string(), password: z.string() });
  */
 app.post('/api/auth/login', async (req, res) => {
   try {
-    console.log('Login request received:', { 
-      body: req.body, 
-      authHeader: req.headers.authorization,
-      cookies: req.headers.cookie 
-    });
-    
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const { identifier, password } = parsed.data;
@@ -262,17 +256,13 @@ app.post('/api/auth/login', async (req, res) => {
     });
     
     if (!user) {
-      console.log('User not found for identifier:', identifier);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     const ok = await bcrypt.compare(password, (user as any).passwordHash);
     if (!ok) {
-      console.log('Invalid password for user:', (user as any).id);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
-    console.log('User authenticated successfully:', { userId: (user as any).id, username: (user as any).username });
     
     // Generate JWT token
     const token = generateToken({
@@ -280,8 +270,6 @@ app.post('/api/auth/login', async (req, res) => {
       username: (user as any).username,
       role: (user as any).role || 'user'
     });
-    
-    console.log('JWT token generated successfully');
     
     return res.json({ 
       id: (user as any).id, 
@@ -338,12 +326,6 @@ app.post('/api/auth/login', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 app.get('/api/auth/me', requireAuth, async (req, res) => {
-  console.log('Auth/me request received:', { 
-    user: (req as any).user,
-    authHeader: req.headers.authorization,
-    cookies: req.headers.cookie
-  });
-  
   const user = (req as any).user;
   
   try {
@@ -353,11 +335,9 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
     });
     
     if (!dbUser) {
-      console.log('User not found in database for userId:', user.userId);
       return res.status(401).json({ error: 'User not found' });
     }
     
-    console.log('User found successfully:', { id: dbUser.id, username: dbUser.username, role: dbUser.role });
     return res.json({ 
       id: dbUser.id, 
       username: dbUser.username, 
@@ -374,6 +354,8 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 app.use('/api/events', require('./routes/events').default);
 app.use('/api/ratings', require('./routes/ratings').default);
 app.use('/api/rewards', require('./routes/rewards').default);
+app.use('/api/matching', require('./routes/matching').default);
+app.use('/api/chat', require('./routes/chat').default);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', require('./routes/admin').default);
 

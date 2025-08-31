@@ -230,7 +230,7 @@ export default function AdminAnalytics() {
             <Button variant="outline" onClick={() => window.open('/admin/events', '_blank')} className="w-full sm:w-auto">
               View All Events
             </Button>
-            <Button variant="outline" onClick={() => window.open('/admin/matching', '_blank')} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => window.open('/admin/events', '_blank')} className="w-full sm:w-auto">
               Trigger Matching
             </Button>
           </div>

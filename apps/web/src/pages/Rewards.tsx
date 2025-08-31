@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
 import AuthGuard from '../components/AuthGuard'
-import { Target, TrendingUp, Award, Zap, Crown } from 'lucide-react'
+import { TagIcon, ChartBarIcon, StarIcon, BoltIcon, TrophyIcon } from '@heroicons/react/24/outline'
 
 interface Badge {
   id: string
@@ -17,7 +17,7 @@ interface Badge {
   progress: number
   current: number
   required: number
-  awardedAt?: string
+  StarIconedAt?: string
 }
 
 interface PointsData {
@@ -73,7 +73,7 @@ export default function Rewards() {
         toast.success(`🎉 ${data.count} new badge${data.count > 1 ? 's' : ''} earned!`)
         queryClient.invalidateQueries({ queryKey: ['user-badges'] })
       } else {
-        toast.info('No new badges to award yet. Keep participating!')
+        toast.info('No new badges to StarIcon yet. Keep participating!')
       }
     },
     onError: (error: any) => {
@@ -112,7 +112,7 @@ export default function Rewards() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Zap className="w-6 h-6 text-yellow-500" />
+                  <BoltIcon className="w-6 h-6 text-yellow-500" />
                   {pointsLoading ? '...' : (pointsData as any)?.currentPoints || 0} Points
                 </h2>
                 <p className="text-muted-foreground">
@@ -124,7 +124,7 @@ export default function Rewards() {
                 disabled={checkBadgesMutation.isPending}
                 className="flex items-center gap-2"
               >
-                <Target className="w-4 h-4" />
+                <TagIcon className="w-4 h-4" />
                 {checkBadgesMutation.isPending ? 'Checking...' : 'Check Badges'}
               </Button>
             </div>
@@ -150,10 +150,10 @@ export default function Rewards() {
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-lg">
           {[
-            { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-4 h-4" /> },
-            { id: 'badges', label: 'Badges', icon: <Award className="w-4 h-4" /> },
-            { id: 'leaderboard', label: 'Leaderboard', icon: <Crown className="w-4 h-4" /> },
-            { id: 'transactions', label: 'History', icon: <Target className="w-4 h-4" /> },
+            { id: 'overview', label: 'Overview', icon: <ChartBarIcon className="w-4 h-4" /> },
+            { id: 'badges', label: 'Badges', icon: <StarIcon className="w-4 h-4" /> },
+            { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon className="w-4 h-4" /> },
+            { id: 'transactions', label: 'History', icon: <TagIcon className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -177,7 +177,7 @@ export default function Rewards() {
             <Card>
               <div className="p-6 space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Award className="w-5 h-5" />
+                  <StarIcon className="w-5 h-5" />
                   Recent Badges
                 </h3>
                 {badgesLoading ? (
@@ -203,7 +203,7 @@ export default function Rewards() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <StarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No badges earned yet</p>
                     <p className="text-sm">Participate in events to earn your first badge!</p>
                   </div>
@@ -215,7 +215,7 @@ export default function Rewards() {
             <Card>
               <div className="p-6 space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Crown className="w-5 h-5" />
+                  <TrophyIcon className="w-5 h-5" />
                   Top Contributors
                 </h3>
                 {leaderboardLoading ? (
@@ -245,7 +245,7 @@ export default function Rewards() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Crown className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <TrophyIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No leaderboard data yet</p>
                   </div>
                 )}
@@ -332,7 +332,7 @@ export default function Rewards() {
           <Card>
             <div className="p-6 space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Crown className="w-5 h-5" />
+                <TrophyIcon className="w-5 h-5" />
                 Community Leaderboard
               </h3>
               {leaderboardLoading ? (
@@ -368,7 +368,7 @@ export default function Rewards() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Crown className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <TrophyIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No leaderboard data available</p>
                 </div>
               )}
@@ -380,7 +380,7 @@ export default function Rewards() {
           <Card>
             <div className="p-6 space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Target className="w-5 h-5" />
+                <TagIcon className="w-5 h-5" />
                 Points History
               </h3>
               {pointsLoading ? (
@@ -418,7 +418,7 @@ export default function Rewards() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <TagIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No transaction history yet</p>
                   <p className="text-sm">Participate in events to start earning points!</p>
                 </div>

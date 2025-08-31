@@ -19,14 +19,16 @@ export const db = drizzle(pool, {
     usersRelations: schema.usersRelations,
     neighbourhoodsRelations: schema.neighbourhoodsRelations,
     eventsRelations: schema.eventsRelations,
-    participantsRelations: schema.participantsRelations,
     eventRatingsRelations: schema.eventRatingsRelations,
     testimonialsRelations: schema.testimonialsRelations,
     userBadgesRelations: schema.userBadgesRelations,
     userPointsRelations: schema.userPointsRelations,
     pointTransactionsRelations: schema.pointTransactionsRelations,
     pointRedemptionsRelations: schema.pointRedemptionsRelations,
-    dinnerGroupsRelations: schema.dinnerGroupsRelations,
+    matchingPoolRelations: schema.matchingPoolRelations,
+    circlesRelations: schema.circlesRelations,
+    circleMembersRelations: schema.circleMembersRelations,
+    emailNotificationsRelations: schema.emailNotificationsRelations,
   }
 });
 

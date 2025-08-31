@@ -1,11 +1,17 @@
-import { useState } from 'react'
-import { Card, Button, Badge } from '../components/ui'
+import { useState, useEffect } from 'react'
+import { Card, Button } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, matchingApi } from '../lib/api'
+import type { MatchingStatus } from '../lib/api'
 import { toast } from 'sonner'
 
 import AuthGuard from '../components/AuthGuard'
-import { Calendar, Clock, MapPin, Users, ChefHat, Home, Search } from 'lucide-react'
+import { OptInDialog } from '../components/OptInDialog'
+import { CircleDetails } from '../components/CircleDetails'
+import { 
+  CheckCircleIcon, 
+  XCircleIcon 
+} from '@heroicons/react/24/outline'
 
 interface Event {
   id: number
@@ -16,37 +22,19 @@ interface Event {
   endTime: string
   totalSpots: number
   spotsRemaining: number
-  format: 'rotating' | 'hosted'
+  format: 'matching'
   neighbourhood: string
-  isWaitlist: boolean
+  matchingStatus: 'open' | 'matching' | 'closed'
+  optInCount: number
+  circleCount: number
   createdAt: string
-}
-
-interface User {
-  id: number
-  username: string
-  name: string
-  email: string
-}
-
-interface EventRegistration {
-  eventId: number
-  coursePreference?: 'starter' | 'main' | 'dessert'
-  isHost?: boolean
-  partnerId?: number
 }
 
 export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false)
-  const [registrationData, setRegistrationData] = useState<EventRegistration>({
-    eventId: 0,
-    coursePreference: undefined,
-    isHost: false,
-  })
-  const [partnerSearch, setPartnerSearch] = useState('')
-  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [isOptInOpen, setIsOptInOpen] = useState(false)
+  const [selectedEventStatus, setSelectedEventStatus] = useState<MatchingStatus | null>(null)
+  const [optedInEvents, setOptedInEvents] = useState<Set<number>>(new Set())
   const queryClient = useQueryClient()
 
   const { data: events, isLoading } = useQuery({
@@ -54,89 +42,51 @@ export default function Events() {
     queryFn: () => api<Event[]>('/api/events'),
   })
 
-  // Fetch user's events to check participation
+  // Fetch user's events to check participation (only for events with completed matching)
   const { data: userEvents } = useQuery({
     queryKey: ['user-events'],
     queryFn: () => api<any[]>('/api/events/my-events'),
   })
 
-  // Create a set of event IDs that the user is already participating in
+  // Create a set of event IDs that the user is already participating in (after matching)
   const userParticipatingEventIds = new Set(userEvents?.map((event: any) => event.id) || [])
 
-  const registerMutation = useMutation({
-    mutationFn: (data: EventRegistration) =>
-      api(`/api/events/${data.eventId}/join`, { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
+  const optOutMutation = useMutation({
+    mutationFn: (eventId: number) => matchingApi.optOut(eventId),
+    onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
       queryClient.invalidateQueries({ queryKey: ['user-events'] })
-      setIsRegistrationOpen(false)
-      setSelectedEvent(null)
-      setPartnerSearch('')
-      setFilteredUsers([])
-      toast.success('Successfully registered for event!')
+      // Remove from opted-in events
+      setOptedInEvents(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(eventId)
+        return newSet
+      })
+      toast.success('Successfully opted out of matching!')
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Failed to register for event')
+      toast.error(error?.message || 'Failed to opt out')
     },
   })
 
-  const handleRegister = (event: Event) => {
+  const handleOptIn = (event: Event) => {
     setSelectedEvent(event)
-    setRegistrationData({ 
-      eventId: event.id,
-      coursePreference: undefined,
-      isHost: false,
-    })
-    setIsRegistrationOpen(true)
+    setIsOptInOpen(true)
   }
 
-  const handlePartnerSearch = async (searchTerm: string) => {
-    setPartnerSearch(searchTerm)
-    
-    if (!searchTerm.trim() || searchTerm.trim().length < 2) {
-      setFilteredUsers([])
-      setShowPartnerDropdown(false)
-      return
-    }
-
-    try {
-      const response = await api<User[]>(`/api/events/partners/search?q=${encodeURIComponent(searchTerm.trim())}`)
-      setFilteredUsers(response)
-      setShowPartnerDropdown(response.length > 0)
-    } catch (error) {
-      console.error('Partner search error:', error)
-      setFilteredUsers([])
-      setShowPartnerDropdown(false)
+  const handleOptOut = (eventId: number) => {
+    if (confirm('Are you sure you want to opt out of this event? This will also remove your partner if you have one.')) {
+      optOutMutation.mutate(eventId)
     }
   }
 
-  const selectPartner = (user: User) => {
-    setRegistrationData(prev => ({ ...prev, partnerId: user.id }))
-    setPartnerSearch(user.name)
-    setShowPartnerDropdown(false)
-  }
-
-  const handleSubmitRegistration = () => {
-    if (!registrationData.eventId) {
-      toast.error('Please select an event')
-      return
+  const handleOptInSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['events'] })
+    queryClient.invalidateQueries({ queryKey: ['user-events'] })
+    // Re-check opted-in events after successful opt-in
+    if (selectedEvent) {
+      setOptedInEvents(prev => new Set([...prev, selectedEvent.id]))
     }
-
-    if (selectedEvent?.format === 'rotating') {
-      // For rotating dinners, course preference is required
-      if (!registrationData.coursePreference) {
-        toast.error('Please select a course preference for rotating dinners')
-        return
-      }
-      
-      // For rotating dinners, partner is required
-      if (!registrationData.partnerId) {
-        toast.error('Partner is required for rotating dinners. Please select a partner.')
-        return
-      }
-    }
-
-    registerMutation.mutate(registrationData)
   }
 
   const formatEventDate = (date: string) => {
@@ -152,252 +102,221 @@ export default function Events() {
     return `${startTime} - ${endTime}`
   }
 
-  const getEventStatus = (event: Event) => {
-    if (event.isWaitlist) return { text: 'Waitlist', color: 'bg-yellow-100 text-yellow-800' }
-    if (event.spotsRemaining === 0) return { text: 'Full', color: 'bg-red-100 text-red-800' }
-    if (event.spotsRemaining <= 3) return { text: 'Few Spots Left', color: 'bg-orange-100 text-orange-800' }
-    return { text: 'Available', color: 'bg-green-100 text-green-800' }
+
+
+  const getMatchingStatus = async (eventId: number) => {
+    try {
+      const status = await matchingApi.getStatus(eventId)
+      setSelectedEventStatus(status)
+    } catch (error) {
+      console.error('Failed to get matching status:', error)
+    }
   }
+
+  // Check if user has opted in for a specific event
+  const checkUserOptIn = async (eventId: number): Promise<boolean> => {
+    try {
+      const participation = await api(`/api/events/${eventId}/my-participation`)
+      return participation !== null
+    } catch (error) {
+      return false
+    }
+  }
+
+  // Check which events the user has opted in for
+  useEffect(() => {
+    const checkOptedInEvents = async () => {
+      if (!events) return
+      
+      const optedInSet = new Set<number>()
+      for (const event of events) {
+        const isOptedIn = await checkUserOptIn(event.id)
+        if (isOptedIn) {
+          optedInSet.add(event.id)
+        }
+      }
+      setOptedInEvents(optedInSet)
+    }
+
+    checkOptedInEvents()
+  }, [events])
 
   return (
     <AuthGuard>
       <div className="container py-10 space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Upcoming Dinner Events</h1>
-          <p className="text-muted-foreground mt-2">
-            Join your neighbors for memorable dining experiences in your community. Only upcoming events are shown.
-          </p>
+        {/* Hero Section */}
+        <div className="text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-medium">
+            <span>❤️</span>
+            Your Next Adventure Awaits
+          </div>
+          
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+              FIND YOUR NEXT<br />
+              DINNER PARTY
+            </h1>
+            <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
+              Join neighbors for unforgettable evenings of <strong>great food, genuine conversation, and lasting connections</strong> right in your neighborhood.
+            </p>
+          </div>
+
+          {/* Statistics */}
+          <div className="flex justify-center items-center gap-8 md:gap-12 mt-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-900">4.9</div>
+              <div className="text-sm text-gray-600">⭐ average rating</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-900">98%</div>
+              <div className="text-sm text-gray-600">would attend again</div>
+            </div>
+          </div>
         </div>
 
-        {/* Event Formats Explanation */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <ChefHat className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold">Rotating Dinners</h3>
-              </div>
-              <p className="text-muted-foreground">
-                Experience three courses across different homes. Each participant hosts one course
-                and enjoys all three. Perfect for meeting multiple neighbors!
-              </p>
-              <ul className="text-sm space-y-1">
-                <li>• Starter at first host's home</li>
-                <li>• Main course at second host's home</li>
-                <li>• Dessert at third host's home</li>
-                <li>• Partners required for rotating format</li>
-              </ul>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Home className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold">Hosted Dinners</h3>
-              </div>
-              <p className="text-muted-foreground">
-                Traditional dinner party hosted by one neighbor. All courses served at one location
-                with optional contributions from guests.
-              </p>
-              <ul className="text-sm space-y-1">
-                <li>• All courses at host's home</li>
-                <li>• Optional partner/guest</li>
-                <li>• More intimate experience</li>
-                <li>• Guests can contribute dishes</li>
-              </ul>
-            </div>
-          </Card>
-        </div>
+        
 
         {/* Events List */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">Upcoming Events</h2>
-          
-          {isLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="p-6">
-                  <div className="space-y-4">
-                    <div className="h-4 bg-muted rounded animate-pulse" />
-                    <div className="h-3 bg-muted rounded animate-pulse" />
-                    <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                    <div className="h-8 bg-muted rounded animate-pulse" />
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : events && events.length > 0 ? (
+          <div className="space-y-8">
+            {/* Catchy Message */}
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                🎉 Exciting Dinner Adventures Await!
+              </h2>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Ready to create unforgettable memories with amazing neighbors? Choose your perfect dinner date and let the magic begin!
+              </p>
+            </div>
+
+            {/* Events Grid */}
+            <div className="grid gap-4">
+            {events.map((event) => {
+              const isOptedIn = optedInEvents.has(event.id)
+              const isParticipating = userParticipatingEventIds.has(event.id)
+              const isInvolved = isOptedIn || isParticipating
+              
+              return (
+                <Card key={event.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                                         <div className="flex-1">
+                       <div className="flex items-center gap-4">
+                         <span className="text-sm text-gray-600">
+                           {formatEventDate(event.date)} • {formatEventTime(event.startTime, event.endTime)}
+                         </span>
+                         {isInvolved && (
+                           <div className="flex items-center gap-2 text-green-600">
+                             <CheckCircleIcon className="w-4 h-4" />
+                             <span className="text-sm font-medium">
+                               {isParticipating ? 'Matched' : 'Opted In'}
+                             </span>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+
+                    <div className="flex gap-2">
+                      {isInvolved ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleOptOut(event.id)}
+                            disabled={optOutMutation.isPending}
+                            className="text-sm px-3 py-1"
+                          >
+                            <XCircleIcon className="w-4 h-4 mr-1" />
+                            Opt Out
+                          </Button>
+                          {event.matchingStatus === 'closed' && isParticipating && (
+                            <Button
+                              variant="outline"
+                              onClick={() => getMatchingStatus(event.id)}
+                              className="text-sm px-3 py-1"
+                            >
+                              View Circle
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button
+                          onClick={() => handleOptIn(event)}
+                          disabled={event.matchingStatus !== 'open'}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Join us on {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
-              ))}
+              )
+            })}
             </div>
-          ) : events?.length === 0 ? (
-            <Card>
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No Upcoming Events</h3>
-                <p className="text-muted-foreground mb-4">
-                  There are no upcoming dinner events scheduled at the moment.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Check back soon or consider hosting your own event to bring the community together!
-                </p>
+          </div>
+        ) : (
+          <Card className="bg-gray-50 border-gray-200">
+            <div className="p-12 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                NEW DINNER PARTIES COMING<br />
+                SOON!
+              </h2>
+              <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                We're working on scheduling new dinner parties in your area. Check back soon or join our waitlist to be notified first!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button className="bg-red-600 hover:bg-red-700">
+                  Join Waitlist
+                </Button>
+                <Button variant="outline" onClick={() => window.location.href = '/'}>
+                  Back to Home
+                </Button>
               </div>
-            </Card>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events?.map((event) => {
-                const status = getEventStatus(event)
-                return (
-                  <Card key={event.id} className="p-4 sm:p-6 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                        <h3 className="font-semibold text-base sm:text-lg break-words">{event.title}</h3>
-                        <Badge className={`${status.color} shrink-0`}>{status.text}</Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm line-clamp-2">{event.description}</p>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{formatEventDate(event.date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{formatEventTime(event.startTime, event.endTime)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{event.neighbourhood}</span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Users className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{event.spotsRemaining} of {event.totalSpots} spots available</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <Badge variant="outline" className="capitalize shrink-0 self-start">
-                        {event.format} format
-                      </Badge>
-                      <Button
-                        onClick={() => handleRegister(event)}
-                        disabled={event.spotsRemaining === 0 && !event.isWaitlist || userParticipatingEventIds.has(event.id)}
-                        className="w-full sm:w-auto"
-                      >
-                        {userParticipatingEventIds.has(event.id) 
-                          ? 'Already Registered' 
-                          : event.spotsRemaining === 0 && !event.isWaitlist 
-                            ? 'Full' 
-                            : 'Register'
-                        }
-                      </Button>
-                    </div>
-                  </Card>
-                )
-              })}
             </div>
-          )}
-        </div>
+          </Card>
+        )}
 
-        {/* Registration Modal */}
-        {isRegistrationOpen && selectedEvent && (
+        {/* Opt In Dialog */}
+        {selectedEvent && (
+          <OptInDialog
+            isOpen={isOptInOpen}
+            onClose={() => {
+              setIsOptInOpen(false)
+              setSelectedEvent(null)
+            }}
+            eventId={selectedEvent.id}
+            eventDate={selectedEvent.date}
+            eventStartTime={selectedEvent.startTime}
+            eventEndTime={selectedEvent.endTime}
+            onSuccess={handleOptInSuccess}
+          />
+        )}
+
+        {/* Circle Details Dialog */}
+        {selectedEventStatus?.userCircle && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="p-4 sm:p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Register for Event</h3>
-                <p className="text-sm text-muted-foreground break-words">{selectedEvent.title}</p>
-
-                {/* Course Preference - Only for rotating dinners */}
-                {selectedEvent.format === 'rotating' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Course Preference (Required)
-                    </label>
-                    <select
-                      value={registrationData.coursePreference || ''}
-                      onChange={(e) => setRegistrationData({
-                        ...registrationData,
-                        coursePreference: e.target.value as 'starter' | 'main' | 'dessert'
-                      })}
-                      className="w-full px-3 py-2 border rounded-md"
-                    >
-                      <option value="">Select course preference</option>
-                      <option value="starter">Starter (Appetizers)</option>
-                      <option value="main">Main Course</option>
-                      <option value="dessert">Dessert</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      Note: Course preference is not guaranteed and will be assigned by the system
-                    </p>
-                  </div>
-                )}
-
-                {/* Partner Registration */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Partner {selectedEvent.format === 'rotating' ? '(Required)' : '(Optional)'}
-                  </label>
-                  
-                  <div className="relative">
-                    <div className="flex items-center border rounded-md">
-                      <Search className="w-4 h-4 text-muted-foreground ml-3 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Search for a partner by name..."
-                        value={partnerSearch}
-                        onChange={(e) => handlePartnerSearch(e.target.value)}
-                        onFocus={() => setShowPartnerDropdown(true)}
-                        className="flex-1 px-3 py-2 outline-none min-w-0"
-                      />
-                    </div>
-                    
-                    {/* Partner Dropdown */}
-                    {showPartnerDropdown && filteredUsers.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                        {filteredUsers.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => selectPartner(user)}
-                            className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
-                          >
-                            <div className="font-medium truncate">{user.name}</div>
-                            <div className="text-sm text-muted-foreground truncate">@{user.username}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {selectedEvent.format === 'hosted' && (
-                    <p className="text-xs text-muted-foreground">
-                      Optional: Bring a partner to share the experience
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsRegistrationOpen(false)
-                      setPartnerSearch('')
-                      setFilteredUsers([])
-                    }}
-                    className="flex-1"
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Your Circle Details</h2>
+                  <button
+                    onClick={() => setSelectedEventStatus(null)}
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSubmitRegistration}
-                    disabled={registerMutation.isPending}
-                    className="flex-1"
-                  >
-                    {registerMutation.isPending ? 'Registering...' : 'Register'}
-                  </Button>
+                                         <XCircleIcon className="w-6 h-6" />
+                  </button>
                 </div>
               </div>
-            </Card>
+              <div className="p-6">
+                <CircleDetails
+                  circle={selectedEventStatus.userCircle}
+                  currentUserId={1} // TODO: Get from auth context
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

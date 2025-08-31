@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { toast } from 'sonner'
 import type { EventItem } from './EventCard'
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 
 interface User {
   id: number
@@ -22,7 +22,7 @@ const schema = z.object({
 })
 
 export default function RegisterDialog({ open, onOpenChange, event }: { open: boolean; onOpenChange: (v: boolean) => void; event: EventItem }) {
-  const [partnerSearch, setPartnerSearch] = useState('')
+  const [partnerMagnifyingGlassIcon, setPartnerMagnifyingGlassIcon] = useState('')
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   
@@ -33,21 +33,21 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
     }
   })
   
-  const handlePartnerSearch = async (searchTerm: string) => {
-    setPartnerSearch(searchTerm)
+  const handlePartnerMagnifyingGlassIcon = async (MagnifyingGlassIconTerm: string) => {
+    setPartnerMagnifyingGlassIcon(MagnifyingGlassIconTerm)
     
-    if (!searchTerm.trim() || searchTerm.trim().length < 2) {
+    if (!MagnifyingGlassIconTerm.trim() || MagnifyingGlassIconTerm.trim().length < 2) {
       setFilteredUsers([])
       setShowPartnerDropdown(false)
       return
     }
 
     try {
-      const response = await api<User[]>(`/api/events/partners/search?q=${encodeURIComponent(searchTerm.trim())}`)
+      const response = await api<User[]>(`/api/events/partners/MagnifyingGlassIcon?q=${encodeURIComponent(MagnifyingGlassIconTerm.trim())}`)
       setFilteredUsers(response)
       setShowPartnerDropdown(response.length > 0)
     } catch (error) {
-      console.error('Partner search error:', error)
+      console.error('Partner MagnifyingGlassIcon error:', error)
       setFilteredUsers([])
       setShowPartnerDropdown(false)
     }
@@ -55,7 +55,7 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
 
   const selectPartner = (user: User) => {
     setValue('partnerId', user.id)
-    setPartnerSearch(user.name)
+    setPartnerMagnifyingGlassIcon(user.name)
     setShowPartnerDropdown(false)
   }
   
@@ -85,7 +85,7 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
       toast.success('Registered! We will email you details.')
       onOpenChange(false)
       reset()
-      setPartnerSearch('')
+      setPartnerMagnifyingGlassIcon('')
       setFilteredUsers([])
     } catch (e: any) {
       toast.error(e?.message || 'Registration failed')
@@ -124,12 +124,12 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
             
             <div className="relative mt-2">
               <div className="flex items-center border rounded-md">
-                <Search className="w-4 h-4 text-muted-foreground ml-3 shrink-0" />
+                <MagnifyingGlassIcon className="w-4 h-4 text-muted-foreground ml-3 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search for a partner by name..."
-                  value={partnerSearch}
-                  onChange={(e) => handlePartnerSearch(e.target.value)}
+                  placeholder="MagnifyingGlassIcon for a partner by name..."
+                  value={partnerMagnifyingGlassIcon}
+                  onChange={(e) => handlePartnerMagnifyingGlassIcon(e.target.value)}
                   onFocus={() => setShowPartnerDropdown(true)}
                   className="flex-1 px-3 py-2 outline-none min-w-0"
                 />
@@ -174,7 +174,7 @@ export default function RegisterDialog({ open, onOpenChange, event }: { open: bo
               variant="outline" 
               onClick={() => {
                 onOpenChange(false)
-                setPartnerSearch('')
+                setPartnerMagnifyingGlassIcon('')
                 setFilteredUsers([])
               }}
               className="flex-1 sm:flex-none"

@@ -1,5 +1,5 @@
 import { db } from '../db/client'
-import { userPoints, pointTransactions, userBadges, participants, events, users, neighbourhoods } from '../db/schema'
+import { userPoints, pointTransactions, userBadges, events, users, neighbourhoods, matchingPool } from '../db/schema'
 import { eq, and, desc, count, sql, gte, lte } from 'drizzle-orm'
 
 export interface BadgeDefinition {
@@ -183,26 +183,20 @@ export class RewardsService {
    * Get user statistics for badge checking
    */
   private static async getUserStats(userId: number) {
-    // Get events participated
+    // Get events opted into
     const [eventsParticipated] = await db.select({ count: count() })
-      .from(participants)
-      .where(eq(participants.userId, userId))
+      .from(matchingPool)
+      .where(eq(matchingPool.userId, userId))
 
-    // Get events hosted
+    // Get events where hosting is available
     const [eventsHosted] = await db.select({ count: count() })
-      .from(participants)
-      .where(and(eq(participants.userId, userId), eq(participants.isHost, true)))
-
-    // Get unique courses hosted
-    const coursesHosted = await db.select({ courseAssigned: participants.courseAssigned })
-      .from(participants)
-      .where(and(eq(participants.userId, userId), eq(participants.isHost, true)))
-    const uniqueCourses = new Set(coursesHosted.map(c => c.courseAssigned).filter(Boolean)).size
+      .from(matchingPool)
+      .where(and(eq(matchingPool.userId, userId), eq(matchingPool.hostingAvailable, true)))
 
     // Get ratings received (simplified - in real app you'd check actual ratings)
     const [ratingsReceived] = await db.select({ count: count() })
-      .from(participants)
-      .where(eq(participants.userId, userId))
+      .from(matchingPool)
+      .where(eq(matchingPool.userId, userId))
 
     // Get total points
     const [userPointsData] = await db.select().from(userPoints).where(eq(userPoints.userId, userId))
@@ -210,7 +204,7 @@ export class RewardsService {
     return {
       eventsParticipated: eventsParticipated.count,
       eventsHosted: eventsHosted.count,
-      coursesHosted: uniqueCourses,
+      coursesHosted: 0, // Will be updated when circles are implemented
       ratingsReceived: ratingsReceived.count,
       totalPoints: userPointsData?.totalPointsEarned || 0,
     }
@@ -243,7 +237,7 @@ export class RewardsService {
       createdAt: pointTransactions.createdAt,
       event: {
         id: events.id,
-        title: events.title,
+        title: events.date, // Use date as title for now
       }
     }).from(pointTransactions)
     .leftJoin(events, eq(pointTransactions.eventId, events.id))

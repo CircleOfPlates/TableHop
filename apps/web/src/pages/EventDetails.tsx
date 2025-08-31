@@ -5,16 +5,15 @@ import AuthGuard from '../components/AuthGuard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  ChefHat, 
-  Users, 
-  ArrowLeft,
-  AlertTriangle,
-  User,
-  UserCheck
-} from 'lucide-react'
+  CalendarIcon, 
+  MapPinIcon, 
+  ClockIcon, 
+  ChevronRightIcon,
+  ArrowLeftIcon,
+  ExclamationTriangleIcon,
+  UserIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
 interface EventDetails {
@@ -92,7 +91,7 @@ export default function EventDetails() {
         <div className="container py-8">
           <div className="flex items-center gap-4 mb-6">
             <Button variant="outline" onClick={() => setLocation('/dashboard')} className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </div>
@@ -111,12 +110,12 @@ export default function EventDetails() {
         <div className="container py-8">
           <div className="flex items-center gap-4 mb-6">
             <Button variant="outline" onClick={() => setLocation('/dashboard')} className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </div>
           <div className="text-center py-12">
-            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
             <p className="text-muted-foreground mb-6">The event you're looking for doesn't exist or you don't have access to it.</p>
             <Button onClick={() => setLocation('/dashboard')}>Back to Dashboard</Button>
@@ -142,7 +141,7 @@ export default function EventDetails() {
             onClick={() => setLocation('/dashboard')}
             className="flex items-center gap-2 self-start"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeftIcon className="w-4 h-4" />
             Back to Dashboard
           </Button>
           <div className="min-w-0">
@@ -167,29 +166,29 @@ export default function EventDetails() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="truncate">{new Date(event.date).toLocaleDateString()}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 min-w-0">
-                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <ClockIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="truncate">{event.startTime} - {event.endTime}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 min-w-0">
-                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <MapPinIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="truncate">{event.neighbourhood}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 min-w-0">
-                    <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <UserIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="truncate">{participantCount} participants</span>
                   </div>
                 </div>
 
                 {participation?.coursePreference && (
                   <div className="flex items-center gap-2 min-w-0">
-                    <ChefHat className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <ChevronRightIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="truncate">Course Preference: <Badge variant="outline">{participation.coursePreference}</Badge></span>
                   </div>
                 )}
@@ -203,20 +202,20 @@ export default function EventDetails() {
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 min-w-0">
-                    <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
+                    <CheckCircleIcon className="w-4 h-4 text-green-600 shrink-0" />
                     <span className="truncate">Registered on {new Date(participation.registeredAt).toLocaleDateString()}</span>
                   </div>
                   
                   {participation.isHost && (
                     <div className="flex items-center gap-2 min-w-0">
-                      <ChefHat className="w-4 h-4 text-orange-600 shrink-0" />
+                      <ChevronRightIcon className="w-4 h-4 text-orange-600 shrink-0" />
                       <span className="truncate">You are hosting this event</span>
                     </div>
                   )}
 
                   {participation.partnerName && (
                     <div className="flex items-center gap-2 min-w-0">
-                      <User className="w-4 h-4 text-blue-600 shrink-0" />
+                      <UserIcon className="w-4 h-4 text-blue-600 shrink-0" />
                       <span className="truncate">Partner: {participation.partnerName}</span>
                     </div>
                   )}
@@ -289,7 +288,7 @@ export default function EventDetails() {
             {isUpcoming && participation && (
               <Card className="p-4 border-amber-200 bg-amber-50">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <ExclamationTriangleIcon className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <div className="text-sm text-amber-800 min-w-0">
                     <p className="font-medium mb-1">Opting out will:</p>
                     <ul className="list-disc list-inside space-y-1">
