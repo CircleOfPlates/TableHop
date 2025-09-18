@@ -164,6 +164,10 @@ export const eventsApi = {
   // Get user's past events with highlights
   getMyPastEvents: () =>
     api<any[]>('/api/events/my-past-events'),
+  
+  // Search for potential partners
+  searchPartners: (query: string) =>
+    api<Array<{ id: number; name: string; email: string }>>(`/api/events/partners/search?q=${encodeURIComponent(query)}`),
 };
 
 // Chat API functions

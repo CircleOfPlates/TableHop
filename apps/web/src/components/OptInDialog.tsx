@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Button, Input } from './ui';
-import { matchingApi } from '../lib/api';
+import { matchingApi, eventsApi } from '../lib/api';
 import type { OptInRequest } from '../lib/api';
 import { toast } from 'sonner';
 
@@ -46,16 +46,8 @@ export function OptInDialog({ isOpen, onClose, eventId, eventDate, eventStartTim
     }
 
     try {
-      const response = await fetch(`/api/events/partners/search?q=${encodeURIComponent(query)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPartnerResults(data);
-      }
+      const data = await eventsApi.searchPartners(query);
+      setPartnerResults(data);
     } catch (error) {
       console.error('Partner search error:', error);
     }
