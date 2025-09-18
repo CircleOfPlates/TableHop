@@ -224,5 +224,3 @@ For deployment and technical support:
 ---
 
 **Built with ❤️ for bringing neighbors together through the joy of shared meals.**
-
-
