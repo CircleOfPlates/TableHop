@@ -13,8 +13,8 @@ export default function AuthGuard({ children, fallback = <div className="contain
 
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log('🚫 AuthGuard: User not authenticated, redirecting to login')
-      setLocation('/login')
+      console.log('🚫 AuthGuard: User not authenticated, redirecting to auth')
+      setLocation('/auth')
     }
   }, [user, isLoading, setLocation])
 

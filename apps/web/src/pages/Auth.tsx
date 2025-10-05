@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -25,7 +26,18 @@ export function LoginForm() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await login(values.identifier, values.password)
-      location.href = '/dashboard'
+      
+      // Handle return URL from query params
+      const urlParams = new URLSearchParams(window.location.search)
+      const returnTo = urlParams.get('returnTo')
+      const eventId = urlParams.get('eventId')
+      
+      if (returnTo) {
+        const returnUrl = eventId ? `${returnTo}?eventId=${eventId}` : returnTo
+        location.href = returnUrl
+      } else {
+        location.href = '/dashboard'
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Login failed. Please check your credentials.')
     }
@@ -67,7 +79,18 @@ export function SignupForm() {
       const me = await api<{ id: number; role?: string }>('/api/auth/me')
       setUser(me)
       toast.success('Account created successfully! Please complete your profile.')
-      location.href = '/profile?onboarding=true'
+      
+      // Handle return URL from query params
+      const urlParams = new URLSearchParams(window.location.search)
+      const returnTo = urlParams.get('returnTo')
+      const eventId = urlParams.get('eventId')
+      
+      if (returnTo) {
+        const returnUrl = eventId ? `${returnTo}?eventId=${eventId}` : returnTo
+        location.href = returnUrl
+      } else {
+        location.href = '/profile?onboarding=true'
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Signup failed. Please try again.')
     }
@@ -89,6 +112,49 @@ export function SignupForm() {
       </div>
       <Button type="submit" disabled={isSubmitting} className="w-full">Create account</Button>
     </form>
+  )
+}
+
+// Main Auth component that combines both login and signup
+export default function Auth() {
+  // Check URL parameters to determine initial form
+  const urlParams = new URLSearchParams(window.location.search)
+  const initialForm = urlParams.get('form') || 'login'
+  const [isLogin, setIsLogin] = useState(initialForm === 'login')
+
+  // Clean up URL parameter after component mounts
+  useEffect(() => {
+    if (urlParams.has('form')) {
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('form')
+      window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search)
+    }
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h1 className="text-center text-3xl font-bold text-gray-900">
+          {isLogin ? 'Welcome Back' : 'Join TableHop'}
+        </h1>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button
+            type="button"
+            onClick={() => setIsLogin(!isLogin)}
+            className="font-medium text-red-600 hover:text-red-500"
+          >
+            {isLogin ? 'Sign up' : 'Sign in'}
+          </button>
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {isLogin ? <LoginForm /> : <SignupForm />}
+        </div>
+      </div>
+    </div>
   )
 }
 

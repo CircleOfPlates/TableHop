@@ -11,7 +11,7 @@ export default function Home() {
             <h1 className="text-5xl font-bold leading-tight tracking-tight">Share meals. Build community.</h1>
             <p className="mt-5 text-xl text-muted-foreground max-w-xl">Join weekly rotating dinner parties and hosted tables. Meet neighbours, make friends, and enjoy good food together.</p>
             <div className="mt-8 flex gap-4">
-              <Button onClick={() => (location.href = '/signup')}>Get started</Button>
+              <Button onClick={() => (location.href = '/auth?form=signup&returnTo=/events')}>Get started</Button>
               <Button variant="outline" onClick={() => (location.href = '/how-it-works')}>How it works</Button>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function Home() {
         <Container className="text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Ready to pull up a chair?</h2>
           <p className="text-lg text-muted-foreground mt-2">Opt in, get matched, and enjoy a great night with neighbours.</p>
-          <div className="mt-8"><Button onClick={() => (location.href = '/signup')}>Get started</Button></div>
+          <div className="mt-8"><Button onClick={() => (location.href = '/auth?form=signup&returnTo=/events')}>Get started</Button></div>
         </Container>
       </Section>
     </div>

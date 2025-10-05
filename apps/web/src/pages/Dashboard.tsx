@@ -53,10 +53,10 @@ export default function Dashboard() {
   const optedInButNotMatched = optedInEvents || []
 
   const tabs = [
-    { id: 'upcoming', label: 'Upcoming Dinners', icon: CalendarIcon },
+    { id: 'upcoming', label: 'Upcoming Circles', icon: CalendarIcon },
     { id: 'matches', label: 'Your Matches', icon: UserGroupIcon },
     { id: 'chat', label: 'Group Chat', icon: ChatBubbleLeftRightIcon },
-    { id: 'past', label: 'Past Dinners', icon: CalendarIcon }
+    { id: 'past', label: 'Past Circles', icon: CalendarIcon }
   ]
 
   const renderTabContent = () => {
@@ -286,10 +286,10 @@ export default function Dashboard() {
             {upcomingEvents.length === 0 && optedInButNotMatched.length === 0 && (
               <div className="text-center py-12">
                 <HeartIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">YOUR DINNER JOURNEY STARTS HERE</h2>
-                <p className="text-gray-600 mb-6">Once you attend your first dinner party, you'll see your amazing memories here!</p>
-                <Button onClick={() => setLocation('/events')} className="bg-red-600 hover:bg-red-700">
-                  Find Your First Dinner
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">YOUR CIRCLE JOURNEY STARTS HERE</h2>
+                <p className="text-gray-600 mb-6">Once you attend your first circle, you'll see your amazing memories here!</p>
+                <Button onClick={() => setLocation('/circles')} className="bg-red-600 hover:bg-red-700">
+                  Find Your First Circle
                 </Button>
               </div>
             )}
@@ -605,7 +605,7 @@ export default function Dashboard() {
         {/* Welcome Header */}
         <div className="text-center space-y-4">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-            WELCOME BACK, ADMIN USER! 👋
+            WELCOME BACK, {user?.name || user?.username || 'USER'}! 👋
           </h1>
           <p className="text-muted-foreground">Your next delicious adventure is just around the corner.</p>
         </div>

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api, tokenManager } from '../lib/api'
 
-type AuthUser = { id: number; role?: string } | null
+type AuthUser = { id: number; username?: string; name?: string; email?: string; role?: string } | null
 
 const AuthCtx = createContext<{ 
   user: AuthUser; 

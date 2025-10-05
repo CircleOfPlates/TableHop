@@ -131,11 +131,11 @@ export default function AdminEvents() {
       <div className="container py-6 sm:py-10 space-y-6 px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Event Management</h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Create and manage dinner events</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Circle Management</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Create and manage dinner circles</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
-          Create Event
+          Create Circle
         </Button>
       </div>
 

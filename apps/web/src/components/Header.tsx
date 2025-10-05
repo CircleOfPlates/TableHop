@@ -7,7 +7,7 @@ export default function Header() {
   const { user, logout } = useAuth()
   console.log('user: ' + user)
   const { theme, setTheme, contrast, setContrast } = useTheme()
-  const displayName = user ? `User ${user.id}` : 'Guest'
+  const displayName = user ? (user.name || user.username || `User ${user.id}`) : 'Guest'
 
   const handleLogout = async () => {
     try {
@@ -23,7 +23,7 @@ export default function Header() {
       <div className="container flex h-14 items-center justify-between">
         <a href="/" className="font-semibold">TableHop</a>
         <nav className="flex items-center gap-4">
-          <a href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</a>
+          <a href="/circles" className="text-sm text-muted-foreground hover:text-foreground">Circles</a>
           <a href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">Pricing</a>
           <a href="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground">How it works</a>
         </nav>
@@ -51,11 +51,27 @@ export default function Header() {
               <DropdownMenu.Trigger asChild>
                 <button className="flex items-center gap-2">
                   <Avatar name={displayName} />
-                  <span className="hidden sm:inline text-sm">{displayName}</span>
+                  <div className="hidden sm:block text-left">
+                    <div className="text-sm font-medium">{displayName}</div>
+                    {user.username && user.name && (
+                      <div className="text-xs text-muted-foreground">@{user.username}</div>
+                    )}
+                  </div>
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content className="card p-2" align="end">
-                <DropdownMenu.Label className="px-2 py-1 text-xs text-muted-foreground">Account</DropdownMenu.Label>
+                <DropdownMenu.Label className="px-2 py-1 text-xs text-muted-foreground">
+                  {user.name ? `${user.name}` : 'Account'}
+                  {user.username && user.name && (
+                    <div className="text-xs text-muted-foreground">@{user.username}</div>
+                  )}
+                </DropdownMenu.Label>
+                {user.email && (
+                  <DropdownMenu.Label className="px-2 py-1 text-xs text-muted-foreground">
+                    {user.email}
+                  </DropdownMenu.Label>
+                )}
+                <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Item asChild>
                   <a className="px-2 py-1.5 rounded hover:bg-muted text-sm" href="/dashboard">Dashboard</a>
                 </DropdownMenu.Item>
@@ -81,8 +97,8 @@ export default function Header() {
             </DropdownMenu.Root>
           ) : (
             <div className="flex items-center gap-2">
-              <a className="text-sm" href="/login">Log in</a>
-              <Button as-child="true" className="btn btn-primary"><a href="/signup">Sign up</a></Button>
+              <a className="text-sm" href="/auth">Log in</a>
+              <Button as-child="true" className="btn btn-primary"><a href="/auth?form=signup">Sign up</a></Button>
             </div>
           )}
         </div>

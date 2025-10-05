@@ -101,7 +101,8 @@ const signupSchema = z.object({
  * @swagger
  * /api/auth/signup:
  *   post:
- *     summary: Register a new user
+ *     summary: Register a new user or upgrade guest account
+ *     description: Creates a new user account. If a guest user exists with the same email (empty password), it will be upgraded to a full account.
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -153,7 +154,7 @@ const signupSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       409:
- *         description: User already exists
+ *         description: User already exists (username or email taken by non-guest user)
  *         content:
  *           application/json:
  *             schema:
@@ -164,10 +165,45 @@ app.post('/api/auth/signup', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { username, email, password } = parsed.data;
 
+  // Check for existing user by email or username
   const existing = await db.query.users.findFirst({
     where: (u, { or, eq }) => or(eq(u.email, email), eq(u.username, username)),
   });
-  if (existing) return res.status(409).json({ error: 'User already exists' });
+  
+  if (existing) {
+    // Check if this is a guest user (empty passwordHash) with the same email
+    if (existing.email === email && existing.passwordHash === '') {
+      // This is a guest user trying to complete their profile
+      // Update the guest user with real credentials
+      const passwordHash = await bcrypt.hash(password, 12);
+      
+      const [updated] = await db.update(users)
+        .set({ 
+          username, 
+          passwordHash,
+          name: existing.name === 'Guest' ? null : existing.name // Keep existing name if it was changed
+        })
+        .where(eq(users.id, existing.id))
+        .returning({ id: users.id });
+      
+      // Generate JWT token
+      const token = generateToken({
+        userId: updated.id,
+        username,
+        role: 'user'
+      });
+      
+      return res.status(201).json({ 
+        id: updated.id, 
+        username, 
+        email,
+        token
+      });
+    } else {
+      // Regular user already exists
+      return res.status(409).json({ error: 'User already exists' });
+    }
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
   const [inserted] = await db.insert(users).values({ username, email, passwordHash }).returning({ id: users.id });
@@ -331,7 +367,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   try {
     const dbUser = await db.query.users.findFirst({
       where: (u, { eq }) => eq(u.id, user.userId),
-      columns: { id: true, username: true, email: true, role: true }
+      columns: { id: true, username: true, email: true, role: true, name: true }
     });
     
     if (!dbUser) {
@@ -342,7 +378,8 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
       id: dbUser.id, 
       username: dbUser.username, 
       email: dbUser.email,
-      role: dbUser.role 
+      role: dbUser.role,
+      name: dbUser.name
     });
   } catch (error) {
     console.error('Auth/me error:', error);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Button, Input } from './ui';
-import { matchingApi, eventsApi } from '../lib/api';
+import { matchingApi } from '../lib/api';
 import type { OptInRequest } from '../lib/api';
 import { toast } from 'sonner';
 
@@ -23,9 +23,7 @@ export function OptInDialog({ isOpen, onClose, eventId, eventDate, eventStartTim
   const [formData, setFormData] = useState<OptInRequest>({
     hostingAvailable: false,
   });
-  const [partnerSearch, setPartnerSearch] = useState('');
-  const [partnerResults, setPartnerResults] = useState<Array<{ id: number; name: string; email: string }>>([]);
-  const [selectedPartner, setSelectedPartner] = useState<{ id: number; name: string } | null>(null);
+  const [partnerEmail, setPartnerEmail] = useState('');
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -33,25 +31,10 @@ export function OptInDialog({ isOpen, onClose, eventId, eventDate, eventStartTim
       setFormData({
         hostingAvailable: false,
       });
-      setPartnerSearch('');
-      setPartnerResults([]);
-      setSelectedPartner(null);
+      setPartnerEmail('');
     }
   }, [isOpen]);
 
-  const handlePartnerSearch = async (query: string) => {
-    if (query.length < 2) {
-      setPartnerResults([]);
-      return;
-    }
-
-    try {
-      const data = await eventsApi.searchPartners(query);
-      setPartnerResults(data);
-    } catch (error) {
-      console.error('Partner search error:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +43,7 @@ export function OptInDialog({ isOpen, onClose, eventId, eventDate, eventStartTim
     try {
       const submitData: OptInRequest = {
         ...formData,
-        partnerId: selectedPartner?.id,
+        partnerEmail: partnerEmail.trim() || undefined,
       };
 
       await matchingApi.optIn(eventId, submitData);
@@ -151,50 +134,14 @@ export function OptInDialog({ isOpen, onClose, eventId, eventDate, eventStartTim
               </label>
               <div className="space-y-2">
                 <Input
-                  type="text"
-                  placeholder="Search for partner by name or email..."
-                  value={partnerSearch}
-                  onChange={(e) => {
-                    setPartnerSearch(e.target.value);
-                    handlePartnerSearch(e.target.value);
-                  }}
+                  type="email"
+                  placeholder="Enter partner's email address..."
+                  value={partnerEmail}
+                  onChange={(e) => setPartnerEmail(e.target.value)}
                 />
-                {partnerResults.length > 0 && (
-                  <div className="border rounded-md max-h-32 overflow-y-auto">
-                    {partnerResults.map((partner) => (
-                      <button
-                        key={partner.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPartner(partner);
-                          setPartnerSearch(partner.name);
-                          setPartnerResults([]);
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
-                      >
-                        <div className="font-medium">{partner.name}</div>
-                        <div className="text-sm text-gray-500">{partner.email}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {selectedPartner && (
-                  <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded">
-                    <span className="text-sm">
-                      Partner: <span className="font-medium">{selectedPartner.name}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedPartner(null);
-                        setPartnerSearch('');
-                      }}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
+                <p className="text-xs text-gray-500">
+                  Enter your partner's email address. If they don't have an account, we'll create a guest account and invite them to sign up.
+                </p>
               </div>
             </div>
 

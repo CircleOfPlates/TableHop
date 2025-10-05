@@ -278,6 +278,71 @@ router.get('/neighbourhoods', requireAdmin, async (req, res) => {
 /**
  * @swagger
  * /api/admin/events:
+ *   post:
+ *     summary: Create a new event (admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - startTime
+ *               - endTime
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               startTime:
+ *                 type: string
+ *                 format: time
+ *               endTime:
+ *                 type: string
+ *                 format: time
+ *     responses:
+ *       201:
+ *         description: Event created successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.post('/events', requireAdmin, async (req, res) => {
+  try {
+    const { date, startTime, endTime } = req.body;
+
+    // Validate required fields
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Date, start time, and end time are required' });
+    }
+
+    // Create the event
+    const newEvent = await db.insert(events).values({
+      date,
+      startTime,
+      endTime,
+      matchingStatus: 'open'
+    }).returning();
+
+    res.status(201).json({
+      message: 'Event created successfully',
+      event: newEvent[0]
+    });
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/events:
  *   get:
  *     summary: Get all events (admin only)
  *     tags: [Admin]

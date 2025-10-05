@@ -10,7 +10,7 @@ export default function Admin() {
       <div className="container py-10 space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Manage users, events, and platform analytics</p>
+        <p className="text-muted-foreground mt-2">Manage users, circles, and platform analytics</p>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -26,10 +26,10 @@ export default function Admin() {
 
         <Card>
           <div className="p-6 space-y-2">
-            <h3 className="font-semibold">Event Management</h3>
-            <p className="text-sm text-muted-foreground">Create, edit, and manage dinner events</p>
+            <h3 className="font-semibold">Circle Management</h3>
+            <p className="text-sm text-muted-foreground">Create, edit, and manage dinner circles</p>
             <Button onClick={() => setLocation('/admin/events')} className="w-full">
-              Manage Events
+              Manage Circles
             </Button>
           </div>
         </Card>
@@ -61,7 +61,7 @@ export default function Admin() {
             <h3 className="font-semibold">Quick Actions</h3>
             <div className="space-y-2">
               <Button variant="outline" onClick={() => setLocation('/admin/events')} className="w-full">
-                Create New Event
+                Create New Circle
               </Button>
               <Button variant="outline" onClick={() => setLocation('/admin/admins')} className="w-full">
                 Create Admin User
@@ -82,7 +82,7 @@ export default function Admin() {
                 <span className="text-muted-foreground">Loading...</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span>Events created</span>
+                <span>Circles created</span>
                 <span className="text-muted-foreground">Loading...</span>
               </div>
               <div className="flex items-center justify-between text-sm">

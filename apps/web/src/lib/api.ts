@@ -56,7 +56,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 // Types for matching system
 export interface OptInRequest {
-  partnerId?: number;
+  partnerEmail?: string;
   matchAddress?: string;
   hostingAvailable: boolean;
 }

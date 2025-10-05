@@ -5,7 +5,7 @@ import { api, matchingApi } from '../lib/api'
 import type { MatchingStatus } from '../lib/api'
 import { toast } from 'sonner'
 
-import AuthGuard from '../components/AuthGuard'
+import { useAuth } from '../auth/AuthContext'
 import { OptInDialog } from '../components/OptInDialog'
 import { CircleDetails } from '../components/CircleDetails'
 import { 
@@ -36,6 +36,7 @@ export default function Events() {
   const [selectedEventStatus, setSelectedEventStatus] = useState<MatchingStatus | null>(null)
   const [optedInEvents, setOptedInEvents] = useState<Set<number>>(new Set())
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['events'],
@@ -46,6 +47,7 @@ export default function Events() {
   const { data: userEvents } = useQuery({
     queryKey: ['user-events'],
     queryFn: () => api<any[]>('/api/events/my-events'),
+    enabled: !!user, // Only fetch if user is logged in
   })
 
   // Create a set of event IDs that the user is already participating in (after matching)
@@ -70,6 +72,12 @@ export default function Events() {
   })
 
   const handleOptIn = (event: Event) => {
+    if (!user) {
+      // User is not logged in, redirect to auth page with return URL
+      window.location.href = `/auth?returnTo=${encodeURIComponent('/circles')}&eventId=${event.id}`
+      return
+    }
+    
     setSelectedEvent(event)
     setIsOptInOpen(true)
   }
@@ -141,9 +149,24 @@ export default function Events() {
     checkOptedInEvents()
   }, [events])
 
+  // Handle return from authentication
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const eventId = urlParams.get('eventId')
+    
+    if (eventId && user && events) {
+      const event = events.find(e => e.id === parseInt(eventId))
+      if (event) {
+        setSelectedEvent(event)
+        setIsOptInOpen(true)
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }
+  }, [user, events])
+
   return (
-    <AuthGuard>
-      <div className="container py-10 space-y-8">
+    <div className="container py-10 space-y-8">
         {/* Hero Section */}
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-medium">
@@ -154,7 +177,7 @@ export default function Events() {
           <div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
               FIND YOUR NEXT<br />
-              DINNER PARTY
+              CIRCLE
             </h1>
             <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
               Join neighbors for unforgettable evenings of <strong>great food, genuine conversation, and lasting connections</strong> right in your neighborhood.
@@ -313,14 +336,13 @@ export default function Events() {
               <div className="p-6">
                 <CircleDetails
                   circle={selectedEventStatus.userCircle}
-                  currentUserId={1} // TODO: Get from auth context
+                  currentUserId={user?.id || 0}
                 />
               </div>
             </div>
           </div>
         )}
       </div>
-    </AuthGuard>
   )
 }
 

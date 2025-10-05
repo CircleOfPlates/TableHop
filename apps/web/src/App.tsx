@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Route, Switch, Redirect, useLocation } from 'wouter'
 import './index.css'
-import { LoginForm, SignupForm } from './pages/Auth'
+import Auth from './pages/Auth'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Events from './pages/Events'
@@ -37,10 +37,10 @@ function App() {
           <Layout>
             <Switch location={location}>
               <Route path="/" component={Home} />
-              <Route path="/login" component={Login} />
-              <Route path="/signup" component={Signup} />
+              <Route path="/auth" component={Auth} />
               <Route path="/dashboard" component={Dashboard} />
-              <Route path="/events" component={Events} />
+              <Route path="/circles" component={Events} />
+              <Route path="/events" component={() => { window.location.href = '/circles'; return null; }} />
               <Route path="/rewards" component={Rewards} />
               <Route path="/how-it-works" component={HowItWorks} />
               <Route path="/pricing" component={Pricing} />
@@ -67,8 +67,5 @@ function App() {
     </QueryClientProvider>
   )
 }
-
-function Login() { return <LoginForm /> }
-function Signup() { return <SignupForm /> }
 
 export default App

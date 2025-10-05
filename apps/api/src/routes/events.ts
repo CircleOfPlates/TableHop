@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { db } from '../db/client';
-import { events } from '../db/schema';
+import { events, users } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { getCurrentUser, requireAuth } from '../auth';
 
@@ -275,6 +275,7 @@ router.get('/partners/search', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 /**
  * @swagger

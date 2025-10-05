@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { db } from '../db/client';
-import { matchingPool, events } from '../db/schema';
+import { matchingPool, events, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireAdmin, getCurrentUser } from '../auth';
 import { MatchingService } from '../services/matching';
@@ -11,7 +11,7 @@ const router = express.Router();
 
 // Schema for opt-in request
 const optInSchema = z.object({
-  partnerId: z.number().optional(),
+  partnerEmail: z.string().email().optional(),
   matchAddress: z.string().optional(),
   hostingAvailable: z.boolean().default(false),
 });
@@ -102,21 +102,46 @@ router.post('/opt-in/:eventId', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Already opted in for this event' });
     }
 
-    // If partner is specified, validate partner exists and create opt-in for partner too
-    if (parsed.data.partnerId) {
-      const partner = await db.query.users.findFirst({
-        where: (u, { eq }) => eq(u.id, parsed.data.partnerId!),
+    // If partner email is specified, find or create partner and create opt-in for partner too
+    let partnerId: number | null = null;
+    if (parsed.data.partnerEmail) {
+      // Check if user already exists
+      let partner = await db.query.users.findFirst({
+        where: (u, { eq }) => eq(u.email, parsed.data.partnerEmail!),
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
       });
 
       if (!partner) {
-        return res.status(400).json({ error: 'Partner not found' });
+        // User doesn't exist, create guest user
+        const guestUser = await db.insert(users).values({
+          email: parsed.data.partnerEmail!,
+          name: 'Guest',
+          username: `guest_${Date.now()}`, // Temporary username
+          passwordHash: '', // No password for guest users
+          role: 'user',
+        }).returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        });
+
+        partner = guestUser[0];
+        
+        // TODO: Send email notification to the partner
+        console.log(`📧 Email notification would be sent to ${parsed.data.partnerEmail} about being added as a partner`);
       }
+
+      partnerId = partner.id;
 
       // Check if partner is already opted in
       const partnerOptIn = await db.query.matchingPool.findFirst({
         where: (mp, { and, eq }) => and(
           eq(mp.eventId, eventId),
-          eq(mp.userId, parsed.data.partnerId!)
+          eq(mp.userId, partnerId!)
         ),
       });
 
@@ -127,7 +152,7 @@ router.post('/opt-in/:eventId', requireAuth, async (req, res) => {
       // Create opt-in for partner
       await db.insert(matchingPool).values({
         eventId,
-        userId: parsed.data.partnerId!,
+        userId: partnerId,
         partnerId: user.userId, // Link back to main user
         matchAddress: parsed.data.matchAddress,
         hostingAvailable: false, // Partner doesn't host by default
@@ -138,7 +163,7 @@ router.post('/opt-in/:eventId', requireAuth, async (req, res) => {
     const [optIn] = await db.insert(matchingPool).values({
       eventId,
       userId: user.userId,
-      partnerId: parsed.data.partnerId || null,
+      partnerId: partnerId,
       matchAddress: parsed.data.matchAddress,
       hostingAvailable: parsed.data.hostingAvailable,
     }).returning();
