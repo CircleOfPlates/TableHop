@@ -74,7 +74,13 @@ export default function Events() {
   const handleOptIn = (event: Event) => {
     if (!user) {
       // User is not logged in, redirect to auth page with return URL
-      window.location.href = `/auth?returnTo=${encodeURIComponent('/circles')}&eventId=${event.id}`
+      window.location.href = `/auth?returnTo=${encodeURIComponent('/events')}&eventId=${event.id}`
+      return
+    }
+    
+    // Check if user is already opted in for this event
+    if (optedInEvents.has(event.id)) {
+      toast.info('You are already opted in for this event!')
       return
     }
     
@@ -157,13 +163,23 @@ export default function Events() {
     if (eventId && user && events) {
       const event = events.find(e => e.id === parseInt(eventId))
       if (event) {
-        setSelectedEvent(event)
-        setIsOptInOpen(true)
+        // Check if user is already opted in for this event
+        const isAlreadyOptedIn = optedInEvents.has(event.id)
+        
+        if (isAlreadyOptedIn) {
+          // User is already opted in, show a message instead of opening modal
+          toast.info('You are already opted in for this event!')
+        } else {
+          // User is not opted in, open the opt-in modal
+          setSelectedEvent(event)
+          setIsOptInOpen(true)
+        }
+        
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname)
       }
     }
-  }, [user, events])
+  }, [user, events, optedInEvents])
 
   return (
     <div className="container py-10 space-y-8">
@@ -268,9 +284,15 @@ export default function Events() {
                         <Button
                           onClick={() => handleOptIn(event)}
                           disabled={event.matchingStatus !== 'open'}
-                          className="bg-red-600 hover:bg-red-700"
+                          className={optedInEvents.has(event.id) 
+                            ? "bg-green-600 hover:bg-green-700" 
+                            : "bg-red-600 hover:bg-red-700"
+                          }
                         >
-                          Join us on {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {optedInEvents.has(event.id) 
+                            ? `Already joined for ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                            : `Join us on ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                          }
                         </Button>
                       )}
                     </div>
